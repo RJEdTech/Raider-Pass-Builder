@@ -162,6 +162,11 @@
   details.setup > summary { cursor: pointer; padding: 0.7rem 1rem; font-weight: 600; }
   details.setup > div { padding: 0 1rem 1rem; display: grid; gap: 0.7rem; }
 
+  .rooms-panel { border: 2px solid var(--raider); border-radius: 6px; padding: 1rem; background: var(--bg-elev); display: grid; gap: 0.8rem; }
+  table.rooms td { font-size: 16px; }
+  table.rooms td.rm { font: 700 20px/1.1 "IBM Plex Mono", monospace; white-space: nowrap; }
+  table.rooms td.st { font-family: "IBM Plex Mono", monospace; color: var(--text-mute); }
+  table.rooms tr.grp td { background: var(--bg-card); font-weight: 600; font-size: 14px; color: var(--text-mute); padding: 0.35rem 0.7rem; }
   .out { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 1.25rem; margin-top: 1rem; }
   @media (max-width: 900px) { .out { grid-template-columns: 1fr; } }
   .route h2 { font-size: 1.1rem; margin-bottom: 0.2rem; }
@@ -276,7 +281,7 @@ body.fs .rj-masthead::before{display:none}
     <a href="#step1"><b>1</b> Download tomorrow's schedule</a>
     <a href="#step2"><b>2</b> Send the counselors' calendars</a>
     <a href="#step3"><b>3</b> Add the schedule file</a>
-    <a href="#step4"><b>4</b> Check and print</a>
+    <a href="#step4"><b>4</b> Read the rooms</a>
   </nav>
 
   <!-- ===== Step 1 ===== -->
@@ -423,30 +428,36 @@ body.fs .rj-masthead::before{display:none}
 
   <!-- ===== Step 4 ===== -->
   <section class="block" id="step4">
-    <h2 class="section"><span class="num">STEP 4</span> Check and print</h2>
+    <h2 class="section"><span class="num">STEP 4</span> Check, then read the rooms</h2>
+    <p class="section-sub">You don't have to print anything. The room list below is the answer; printing is there if you want it.</p>
     <ol class="howto">
       <li>
         <div class="h-title">Check anything yellow</div>
-        <div class="h-body">Green <b>Ready</b> rows are done. A yellow <b>Confirm name</b> ① means the calendar spelling was a little off: look at the student the builder picked and tick the box if it's right, or pick someone else from the list. Staff meetings and personal events are left out for you.</div>
-        <figure style="max-width:680px" class="shot"><img width="680" src="img/review.png" alt="The list of passes with a Confirm name row circled" loading="lazy"></figure>
+        <div class="h-body">In <b>Appointments found</b>, green <b>Ready</b> rows are done. A yellow <b>Confirm name</b> ① means the calendar spelling was a little off: look at the student the builder picked and tick the box if it's right, or pick someone else from the list. Staff meetings and personal events are left out for you.</div>
+        <figure style="max-width:680px" class="shot"><img width="680" src="img/review.png" alt="The list of appointments with a Confirm name row circled" loading="lazy"></figure>
       </li>
       <li>
-        <div class="h-title">Print</div>
-        <div class="h-body">Click <b>Print passes</b> ②. In the print window, check the printer and click <b>Print</b>. Page 1 is your route, with a <b>Done</b> box for each stop. The passes come four to a page in the same order, so the stack is already sorted once you cut it.</div>
-        <figure style="max-width:680px" class="shot"><img width="680" src="img/print.png" alt="The Print passes button circled, with the delivery route and pass previews" loading="lazy"></figure>
+        <div class="h-title">Read the rooms</div>
+        <div class="h-body"><b>Rooms for tomorrow</b> lists every student with their 1st-block room, building, teacher, appointment time and counselor. Use <b>Sort by</b> ② to put it in the order that helps you: <b>Walking order</b> for delivering, <b>Counselor, then time</b> to match the calendars, or <b>Last name</b> to find someone fast.</div>
+        <figure style="max-width:680px" class="shot"><img width="680" src="img/rooms.png" alt="The Rooms for tomorrow list with the Sort by menu circled" loading="lazy"></figure>
+      </li>
+      <li>
+        <div class="h-title">Print, only if you want to</div>
+        <div class="h-body"><b>Print room list</b> ③ prints this list on one page, in the order you picked. <b>Print passes</b> ④ prints every pass filled in, four to a page in walking order, with a route page first. In the print window, check the printer and click <b>Print</b>.</div>
+        <figure style="max-width:680px" class="shot"><img width="680" src="img/print.png" alt="The Print room list and Print passes buttons circled" loading="lazy"></figure>
       </li>
     </ol>
 
     <div style="margin-top:1.25rem;display:grid;gap:.8rem">
-      <div class="actions" style="justify-content:space-between"><h3 class="h-title">Passes for tomorrow</h3><div class="tally" id="tally"></div></div>
+      <div class="actions" style="justify-content:space-between"><h3 class="h-title">Appointments found</h3><div class="tally" id="tally"></div></div>
       <div class="tablewrap">
         <table>
-          <thead><tr><th>Pass</th><th>Time</th><th>Student</th><th>Counselor</th><th>Deliver to (1st block)</th><th>Status</th><th>Calendar entry</th></tr></thead>
+          <thead><tr><th>Include</th><th>Time</th><th>Student</th><th>Counselor</th><th>1st-block room</th><th>Status</th><th>Calendar entry</th></tr></thead>
           <tbody id="rows"></tbody>
         </table>
       </div>
       <div class="addrow">
-        <label class="field" for="addStudent">Add a pass by hand
+        <label class="field" for="addStudent">Add a student by hand
           <input type="search" id="addStudent" list="rosterList" placeholder="Start typing a last name" autocomplete="off">
         </label>
         <label class="field" for="addTime">Time
@@ -455,21 +466,40 @@ body.fs .rj-masthead::before{display:none}
         <label class="field" for="addCounselor">Counselor
           <select id="addCounselor"></select>
         </label>
-        <button class="btn ghost" type="button" id="addManualBtn">Add pass</button>
+        <button class="btn ghost" type="button" id="addManualBtn">Add</button>
       </div>
       <details class="skipped" id="skippedBox"><summary id="skippedSum">Skipped entries</summary><ul id="skippedList"></ul></details>
       <datalist id="rosterList"></datalist>
 
-      <div class="actions" style="margin-top:.5rem">
-        <button class="btn big" type="button" id="printBtn">🖨 Print passes</button>
-        <button class="btn ghost" type="button" id="pdfBtn">Save PDF instead</button>
-        <button class="btn ghost" type="button" id="csvBtn">Delivery list (CSV)</button>
-        <span class="status" id="dlStatus"></span>
+      <div class="rooms-panel" id="roomsPanel">
+        <div class="actions" style="justify-content:space-between;align-items:end">
+          <div><h3 class="h-title" style="font-size:1.25rem">Rooms for tomorrow</h3><div class="small" id="roomsMeta"></div></div>
+          <label class="field" for="sortSel">Sort by
+            <select id="sortSel">
+              <option value="walk">Walking order</option>
+              <option value="counselor">Counselor, then time</option>
+              <option value="last">Last name</option>
+            </select>
+          </label>
+        </div>
+        <div class="tablewrap">
+          <table class="rooms">
+            <thead><tr><th id="stopHead">Stop</th><th>Room</th><th>Student</th><th>Time</th><th>Counselor</th><th>1st-block teacher</th></tr></thead>
+            <tbody id="roomsBody"></tbody>
+          </table>
+        </div>
+        <div class="actions">
+          <button class="btn big" type="button" id="listBtn">🖨 Print room list</button>
+          <button class="btn big ghost" type="button" id="printBtn">🖨 Print passes</button>
+          <button class="btn ghost" type="button" id="pdfBtn">Save passes as PDF</button>
+          <button class="btn ghost" type="button" id="csvBtn">Room list for Excel (CSV)</button>
+          <span class="status" id="dlStatus"></span>
+        </div>
       </div>
-      <div class="out">
-        <div class="route" id="route"></div>
-        <div class="slips" id="slips"></div>
-      </div>
+      <details class="setup">
+        <summary>Preview the passes</summary>
+        <div><div class="slips" id="slips"></div></div>
+      </details>
     </div>
 
     <details class="setup" style="margin-top:1.5rem">
@@ -860,6 +890,12 @@ function renderCounselors() {
     <td><input type="text" id="cr${i}" data-cf="range" data-ci="${i}" value="${esc(c.range || '')}" size="6" aria-label="Last names"></td>
     <td><button class="btn ghost" type="button" data-crm="${i}">Remove</button></td></tr>`).join('');
 }
+function sortedList(list) {
+  const mode = $('sortSel').value, out = [...list];
+  if (mode === 'counselor') out.sort((a, b) => natural(a.counselor || '~', b.counselor || '~') || ((a.startMin ?? 9999) - (b.startMin ?? 9999)) || natural(a.student.last, b.student.last));
+  else if (mode === 'last') out.sort((a, b) => natural(a.student.last, b.student.last) || natural(a.student.first, b.student.first) || ((a.startMin ?? 9999) - (b.startMin ?? 9999)));
+  return out;
+}
 function render() {
   const rep = S.report;
   // facts + banners
@@ -901,7 +937,7 @@ function render() {
   }).join('');
 
   const nReady = rows.filter(r => r.include && r.student).length, nLook = rows.filter(needsLook).filter(r => !r.include).length, nOff = rows.filter(r => !r.include && !needsLook(r)).length;
-  $('tally').innerHTML = `<span class="chip ok">${nReady} passes</span>${nLook ? `<span class="chip warn">${nLook} to check</span>` : ''}${nOff ? `<span class="chip plain">${nOff} not included</span>` : ''}${otherDay ? `<span class="chip plain">${otherDay} from other days ignored</span>` : ''}`;
+  $('tally').innerHTML = `<span class="chip ok">${nReady} student${nReady === 1 ? "" : "s"}</span>${nLook ? `<span class="chip warn">${nLook} to check</span>` : ''}${nOff ? `<span class="chip plain">${nOff} not included</span>` : ''}${otherDay ? `<span class="chip plain">${otherDay} from other days ignored</span>` : ''}`;
   $('skippedSum').textContent = `Skipped entries (${skipped.length}) — staff meetings, personal events, cancellations`;
   $('skippedList').innerHTML = skipped.map(x => `<li>${esc(x.ev.start)} · ${esc(x.ev.title)}${x.why === 'Canceled' ? ' (canceled)' : ''}</li>`).join('');
   $('skippedBox').hidden = !skipped.length;
@@ -909,19 +945,21 @@ function render() {
   // route + slips
   const list = deliveryOrder(rows);
   S.lastList = list;
-  const route = $('route');
-  if (!list.length) { route.innerHTML = '<div class="empty">The delivery route appears here once passes are checked.</div>'; $('slips').innerHTML = ''; }
+  const sorted = sortedList(list);
+  S.lastSorted = sorted;
+  const mode = $('sortSel').value;
+  $('stopHead').textContent = mode === 'walk' ? 'Stop' : '#';
+  if (!list.length) { $('roomsBody').innerHTML = `<tr><td colspan="6"><div class="empty">${rep ? 'Rooms appear here once there are appointments.' : 'Rooms appear here after Steps 2 and 3.'}</div></td></tr>`; $('roomsMeta').textContent = ''; $('slips').innerHTML = ''; }
   else {
-    const sections = [];
-    for (const r of list) {
-      const rp = roomParts(r.student.firstClass.room), head = `${rp.bldg}${floorOf(rp.room) ? ' · ' + floorOf(rp.room) : ''}`;
-      let sec = sections.at(-1); if (!sec || sec.head !== head) { sec = { head, stops: [] }; sections.push(sec); }
-      let st = sec.stops.at(-1); if (!st || st.stop !== r.stop) { st = { stop: r.stop, room: rp.room, rows: [] }; sec.stops.push(st); }
-      st.rows.push(r);
-    }
-    const nStops = list.length ? list.at(-1).stop : 0;
-    route.innerHTML = `<h2>Delivery route · ${esc(shortDate(rep.date))}</h2><p class="small">${nStops} stops, starting from BD Counseling. BD first, then SIC and Steele, ending in GD.</p>` + sections.map(sec => `<section><h3>${esc(sec.head)}</h3><ol>${sec.stops.map(st =>
-      `<li><span class="r">${st.stop}. ${esc(st.room)}</span><span class="names">${st.rows.map(r => `<span><b>${esc(r.student.display)}</b> <span class="t">${esc(r.time)} · ${esc(r.counselor)}</span></span>`).join('')}<span class="t">${esc(leadTeacher(st.rows[0].student.firstClass.teacher))}</span></span></li>`).join('')}</ol></section>`).join('');
+    const nStops = list.at(-1).stop;
+    $('roomsMeta').textContent = `${list.length} student${list.length === 1 ? '' : 's'} · ${fmtDate(rep.date)} · 1st block starts ${PB.fracToTime(rep.firstStart / 1440)}${mode === 'walk' ? ` · ${nStops} stops from BD Counseling` : ''}`;
+    let lastGrp = null, i = 0;
+    $('roomsBody').innerHTML = sorted.map(r => {
+      const fc = r.student.firstClass, rp = roomParts(fc.room), early = r.startMin != null && r.startMin <= fc.startMin + 15;
+      const grp = mode === 'walk' ? `${rp.bldg}${floorOf(rp.room) ? ' · ' + floorOf(rp.room) : ''}` : mode === 'counselor' ? r.counselor || 'Counselor not set' : '';
+      const head = grp && grp !== lastGrp ? `<tr class="grp"><td colspan="6">${esc(grp)}</td></tr>` : ''; lastGrp = grp; i++;
+      return `${head}<tr><td class="st">${mode === 'walk' ? r.stop : i}</td><td class="rm">${esc(rp.room)}<div class="small" style="font-family:'Segoe UI',-apple-system,sans-serif">${esc(rp.bldg)}</div></td><td><span class="who">${esc(r.student.display)}</span><div class="small">Gr ${esc(r.student.grade.replace(/\D/g, ''))} · ${esc(dayColor(fc))} day</div></td><td class="time">${esc(r.time)}${early ? '<div><span class="chip warn">Early</span></div>' : ''}</td><td>${esc(r.counselor)}</td><td>${esc(leadTeacher(fc.teacher))}<div class="small">${esc(fc.course.replace(/-[BG]D\b/, ''))}</div></td></tr>`;
+    }).join('');
     $('slips').innerHTML = list.map(r => { const fc = r.student.firstClass, div = divOf(r.counselor), me = passName(r.counselor).toLowerCase();
       return `<div class="slip">
       <div class="p-head"><span class="p-stop">Stop ${r.stop}</span>${esc(div)} COUNSELING PASS</div>
@@ -935,7 +973,7 @@ function render() {
       <div class="p-note">If you are unable to keep this appointment, please stop by the Counseling Office to reschedule before leaving the building today.</div>
       <div class="p-line">Student left the Office at <u class="blank"></u></div></div>`; }).join('');
   }
-  $('pdfBtn').disabled = $('csvBtn').disabled = $('printBtn').disabled = !list.length;
+  $('pdfBtn').disabled = $('csvBtn').disabled = $('printBtn').disabled = $('listBtn').disabled = !list.length;
   quickLookup();
 }
 
@@ -1090,23 +1128,25 @@ $('qlook').addEventListener('input', quickLookup);
 
 // ---------- downloads ----------
 
-function buildPdf() {
+function buildPdf(roomsOnly) {
   const { jsPDF } = window.jspdf;
-  const rep = S.report, list = S.lastList;
+  const rep = S.report, list = roomsOnly ? S.lastSorted : S.lastList;
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
   const RED = [196, 17, 48], INK = [37, 37, 37], GREY = [94, 101, 112];
   // page 1+: delivery route
   doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...RED);
-  doc.text('COUNSELING PASSES · DELIVERY ROUTE', 40, 46);
+  doc.text(roomsOnly ? 'COUNSELING APPOINTMENTS · 1ST-BLOCK ROOMS' : 'COUNSELING PASSES · DELIVERY ROUTE', 40, 46);
   doc.setFontSize(18); doc.setTextColor(...INK); doc.text(fmtDate(rep.date), 40, 70);
   doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(...GREY);
-  doc.text(`${list.length} passes, ${list.length ? list.at(-1).stop : 0} stops · start at BD Counseling: BD, then SIC and Steele, ending in GD · deliver at the start of 1st block (${PB.fracToTime(rep.firstStart / 1440)})`, 40, 88);
+  const sortName = { walk: 'walking order from BD Counseling (BD, SIC, Steele, then GD)', counselor: 'counselor, then time', last: 'last name' }[roomsOnly ? $('sortSel').value : 'walk'];
+  doc.text(`${list.length} students · sorted by ${sortName} · 1st block starts ${PB.fracToTime(rep.firstStart / 1440)}`, 40, 88);
   const body = list.map(r => { const fc = r.student.firstClass, rp = roomParts(fc.room); const early = r.startMin != null && r.startMin <= fc.startMin + 15;
-    return [String(r.stop), rp.bldg + (floorOf(rp.room) ? ' ' + floorOf(rp.room).replace(' floor', '') : ''), rp.room, leadTeacher(fc.teacher), r.student.display + (early ? '  (EARLY)' : ''), r.student.grade.replace(/\D/g, ''), r.time, r.counselor, '']; });
-  doc.autoTable({ startY: 100, head: [['Stop', 'Building', 'Room', '1st block teacher', 'Student', 'Gr', 'Time', 'Counselor', 'Done']], body,
+    return [String(roomsOnly && $('sortSel').value !== 'walk' ? list.indexOf(r) + 1 : r.stop), rp.bldg + (floorOf(rp.room) ? ' ' + floorOf(rp.room).replace(' floor', '') : ''), rp.room, leadTeacher(fc.teacher), r.student.display + (early ? '  (EARLY)' : ''), r.student.grade.replace(/\D/g, ''), r.time, r.counselor, '']; });
+  doc.autoTable({ startY: 100, head: [[roomsOnly && $('sortSel').value !== 'walk' ? '#' : 'Stop', 'Building', 'Room', '1st block teacher', 'Student', 'Gr', 'Time', 'Counselor', 'Done']], body,
     styles: { font: 'helvetica', fontSize: 9.5, cellPadding: 4, textColor: INK, lineColor: [218, 221, 227], lineWidth: 0.5 },
     headStyles: { fillColor: [43, 51, 63], textColor: 255, fontStyle: 'bold' },
     columnStyles: { 0: { cellWidth: 30, fontStyle: 'bold' }, 1: { cellWidth: 66 }, 2: { fontStyle: 'bold', cellWidth: 44 }, 4: { fontStyle: 'bold' }, 5: { cellWidth: 22 }, 6: { cellWidth: 54 }, 7: { cellWidth: 80 }, 8: { cellWidth: 32 } }, margin: { left: 36, right: 36 } });
+  if (roomsOnly) return doc.output('blob');
   // passes: 2 x 2 per letter page, laid out like BD_COUNSELING_PASS.docx
   const M = 36, W = (612 - 2 * M) / 2, H = (792 - 2 * M) / 2, P = 16;
   const field = (lab, val, x, y, end, opts = {}) => {
@@ -1160,9 +1200,9 @@ function buildPdf() {
   return doc.output('blob');
 }
 let lastPdfUrl = null;
-function pdfUrl() {
+function pdfUrl(roomsOnly) {
   if (lastPdfUrl) URL.revokeObjectURL(lastPdfUrl);
-  lastPdfUrl = URL.createObjectURL(buildPdf());
+  lastPdfUrl = URL.createObjectURL(buildPdf(roomsOnly));
   return lastPdfUrl;
 }
 function printUrl(url) {
@@ -1179,19 +1219,22 @@ function save(filename, data) {
   $('dlStatus').textContent = `Saved ${filename} to your Downloads folder.`;
 }
 const libsReady = () => { if (!window.jspdf) { $('dlStatus').textContent = 'The PDF maker did not load. Check the internet connection and reload the page.'; return false; } return true; };
-$('printBtn').addEventListener('click', () => { if (!libsReady() || !S.lastList.length) return; printUrl(pdfUrl()); $('dlStatus').textContent = 'Opening the print window… If nothing appears, use Save PDF instead.'; });
-$('pdfBtn').addEventListener('click', () => { if (!libsReady() || !S.lastList.length) return; save(`Counseling passes ${isoDate(S.report.date)}.pdf`, pdfUrl()); });
+$('printBtn').addEventListener('click', () => { if (!libsReady() || !S.lastList.length) return; printUrl(pdfUrl(false)); $('dlStatus').textContent = 'Opening the print window… If nothing appears, use Save PDF instead.'; });
+$('listBtn').addEventListener('click', () => { if (!libsReady() || !S.lastList.length) return; printUrl(pdfUrl(true)); $('dlStatus').textContent = 'Opening the print window for the room list…'; });
+$('sortSel').addEventListener('change', () => { try { localStorage.setItem('pb.sort', $('sortSel').value); } catch (e) {} render(); });
+try { const v = localStorage.getItem('pb.sort'); if (v && ['walk', 'counselor', 'last'].includes(v)) $('sortSel').value = v; } catch (e) {}
+$('pdfBtn').addEventListener('click', () => { if (!libsReady() || !S.lastList.length) return; save(`Counseling passes ${isoDate(S.report.date)}.pdf`, pdfUrl(false)); });
 $('csvBtn').addEventListener('click', () => {
   const q = v => `"${String(v).replace(/"/g, '""')}"`;
   const lines = [['Building', 'Room', '1st block teacher', 'Student', 'Last', 'First', 'Grade', 'Time', 'Counselor'].map(q).join(',')]
-    .concat(S.lastList.map(r => { const fc = r.student.firstClass, rp = roomParts(fc.room); return [rp.bldg, rp.room, fc.teacher, r.student.display, r.student.last, r.student.first, r.student.grade, r.time, r.counselor].map(q).join(','); }));
+    .concat(S.lastSorted.map(r => { const fc = r.student.firstClass, rp = roomParts(fc.room); return [rp.bldg, rp.room, fc.teacher, r.student.display, r.student.last, r.student.first, r.student.grade, r.time, r.counselor].map(q).join(','); }));
   save(`Counseling delivery list ${isoDate(S.report.date)}.csv`, lines.join('\r\n'));
 });
 
 // ---------- start ----------
 function loadExample() { const ex = exampleData(); S.example = true; S.events = []; S.overrides = {}; S.manual = []; S.report = ex.report; addEvents(ex.text, 'Ginger Brown'); addEvents(ex.text2, 'John Buxton'); render(); }
 $('exampleBtn').addEventListener('click', () => { loadExample(); $('qlook').value = 'Teo'; quickLookup(); $('qlook').focus(); });
-S.example = false; S.lastList = [];
+S.example = false; S.lastList = []; S.lastSorted = [];
 render();
 
 </script>
