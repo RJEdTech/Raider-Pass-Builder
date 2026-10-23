@@ -12,7 +12,8 @@ Find any student's 1st-block room for tomorrow in seconds, and print counseling 
 4. **Check and print:** Check-Ins and entries titled with just a student's name become passes; uncertain names wait for a click; staff and personal events are skipped. The counselor comes from “By …” on the entry, or from the student's division and last name (the ranges on the School Counseling resource board). Passes print four to a letter page on the BD/GD layout in walking order from the BD Counseling Office (BD, then SIC and Steele, ending in GD), with a route sheet on page 1.
 
 A one-student lookup box handles walk-ins. Matching handles preferred names, nicknames, hyphenated last names and small misspellings.
-- Runs entirely in the browser. The schedule file and calendar entries never leave the computer and are gone when the page closes. Only the counselor list is remembered, in the browser.
+
+Runs entirely in the browser. The schedule file and calendar entries never leave the computer and are gone when the page closes. Only the counselor list is remembered, in the browser.
 
 ## How it's built
 
