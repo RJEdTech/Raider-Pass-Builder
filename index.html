@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Raider Pass Builder</title>
+<meta name="description" content="Find any student's 1st-block room for tomorrow in seconds, and print counseling passes in walking order. Runs in your browser: the schedule never leaves your computer.">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#C11430">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<style>
+  /* ===== Theme tokens (shared with the other RJ Ed Tech tools) ===== */
+  :root {
+    --bg: #ffffff; --bg-elev: #fafafa; --bg-card: #f3f3f3; --bg-hover: #ededed;
+    --raider: #C11430; --raider-hot: #a0102a; --raider-tint: rgba(193, 20, 48, 0.08);
+    --text: #1a1a1a; --text-mute: #595959; --text-dim: #6c6c6c;
+    --border: #e5e5e5; --border-strong: #c5c5c5;
+    --ok: #1d6e46; --ok-bg: #e3f1ea; --warn: #7a5200; --warn-bg: #fdf1d8; --bad: #a3122c; --bad-bg: #fbe6ea; --info: #2b4a6f; --info-bg: #e5ecf5;
+  }
+  [data-theme="dark"] {
+    --bg: #15161a; --bg-elev: #1d1f24; --bg-card: #22242a; --bg-hover: #282a30;
+    --raider: #C11430; --raider-hot: #e0223f; --raider-tint: rgba(193, 20, 48, 0.15);
+    --text: #ffffff; --text-mute: #a0a0a0; --text-dim: #8c8c8c;
+    --border: #2e3036; --border-strong: #3a3a3a;
+    --ok: #6fcf9d; --ok-bg: #173327; --warn: #f2c063; --warn-bg: #3a2d12; --bad: #f58a9c; --bad-bg: #3b1820; --info: #9cbce4; --info-bg: #1c2a3b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--text); font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif; font-size: 16px; line-height: 1.5; min-height: 100vh; }
+  body { display: flex; flex-direction: column; }
+  code, .mono { font-family: "IBM Plex Mono", Consolas, "Courier New", monospace; }
+  ::selection { background: var(--raider); color: #fff; }
+  :focus-visible { outline: 2px solid var(--raider); outline-offset: 2px; }
+  [hidden], .hidden { display: none !important; }
+
+  .site-header { border-bottom: 1px solid var(--border); padding: 1.25rem 2rem; display: flex; align-items: center; gap: 1rem; }
+  .header-left { display: flex; align-items: center; gap: 1rem; min-width: 0; }
+  .rj-mark { height: 40px; width: auto; display: block; flex-shrink: 0; }
+  .header-text { display: flex; flex-direction: column; gap: 0.1rem; }
+  .brand { font-size: 1.35rem; font-weight: 600; }
+  .tagline { color: var(--text-mute); font-size: 16px; }
+
+  main { flex: 1; max-width: 1000px; width: 100%; margin: 0 auto; padding: 0 20px 4rem; }
+  .lead { color: var(--text-mute); font-size: 1.05rem; margin-bottom: 1.25rem; max-width: 760px; }
+  .lead strong { color: var(--text); font-weight: 600; }
+  .safe { font-size: 15px; color: var(--text-mute); border-left: 4px solid var(--raider); background: var(--bg-elev); padding: 0.55rem 0.85rem; margin-bottom: 2rem; max-width: 760px; }
+
+  .banner { border: 1px solid var(--border); border-left: 4px solid var(--info); background: var(--info-bg); color: var(--info); padding: 0.6rem 0.9rem; font-weight: 600; font-size: 15px; margin-bottom: 1.25rem; display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+  .banner[data-tone="warn"] { border-left-color: var(--warn); background: var(--warn-bg); color: var(--warn); }
+
+  /* ===== Steps ===== */
+  section.block { margin-bottom: 2.75rem; }
+  h2.section { font-size: 1.3rem; font-weight: 600; margin: 0 0 0.35rem; display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+  h2.section .num { font-family: "IBM Plex Mono", monospace; font-size: 15px; font-weight: 600; color: var(--raider); border: 1px solid var(--raider); border-radius: 3px; padding: 1px 7px; }
+  h2.section .opt { font-size: 14px; font-weight: 600; color: var(--text-mute); border: 1px solid var(--border-strong); border-radius: 99px; padding: 1px 10px; }
+  .section-sub { color: var(--text-mute); margin-bottom: 1.1rem; max-width: 760px; }
+
+  details.how { border: 1px solid var(--border); border-radius: 6px; background: var(--bg-elev); margin-bottom: 1.1rem; }
+  details.how > summary { cursor: pointer; padding: 0.7rem 1rem; font-weight: 600; color: var(--text); list-style: none; display: flex; gap: 0.6rem; align-items: center; }
+  details.how > summary::-webkit-details-marker { display: none; }
+  details.how > summary::before { content: "▸"; color: var(--raider); font-size: 14px; transition: transform .15s; }
+  details.how[open] > summary::before { transform: rotate(90deg); }
+  details.how > summary .hint { font-weight: 400; color: var(--text-mute); font-size: 15px; }
+  details.how > .how-body { padding: 0.25rem 1rem 1.25rem; }
+
+  ol.howto { list-style: none; display: flex; flex-direction: column; gap: 1.5rem; counter-reset: s; }
+  ol.howto > li { counter-increment: s; display: grid; grid-template-columns: 34px 1fr; gap: 0.25rem 0.9rem; }
+  ol.howto > li::before { content: counter(s); grid-row: span 3; font-family: "IBM Plex Mono", monospace; font-weight: 600; background: var(--text); color: var(--bg); width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; margin-top: 2px; }
+  .h-title { font-weight: 600; font-size: 1.05rem; }
+  .h-body { color: var(--text-mute); max-width: 680px; }
+  .h-body b { color: var(--text); font-weight: 600; }
+  figure.shot { margin-top: 0.6rem; border: 1px solid var(--border-strong); border-radius: 4px; overflow: hidden; background: #fff; max-width: 680px; }
+  figure.shot.narrow { max-width: 340px; }
+  figure.shot img { display: block; width: 100%; height: auto; }
+  figure.shot figcaption { font-size: 15px; color: var(--text-mute); background: var(--bg-elev); border-top: 1px solid var(--border); padding: 0.45rem 0.75rem; }
+  .keys { font-family: "IBM Plex Mono", monospace; font-size: 0.85em; border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 4px; padding: 0 6px; background: var(--bg-elev); color: var(--text); white-space: nowrap; }
+
+  /* ===== Buttons and fields ===== */
+  .btn { font: 600 16px/1 "Segoe UI", -apple-system, sans-serif; border: 1px solid var(--raider); background: var(--raider); color: #fff; border-radius: 4px; padding: 0.7rem 1.15rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.45rem; text-decoration: none; }
+  .btn:hover { background: var(--raider-hot); border-color: var(--raider-hot); }
+  .btn.ghost { background: transparent; color: var(--text); border-color: var(--border-strong); }
+  .btn.ghost:hover { background: var(--bg-hover); }
+  .btn.big { font-size: 17px; padding: 0.85rem 1.4rem; }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .actions { display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; }
+  .status { font-size: 15px; color: var(--text-mute); }
+  label.field { display: grid; gap: 0.3rem; font-size: 15px; font-weight: 600; color: var(--text); min-width: 0; }
+  input[type="text"], input[type="search"], input[type="time"], select, textarea {
+    font: 16px/1.4 "Segoe UI", -apple-system, sans-serif; color: var(--text); background: var(--bg); border: 1px solid var(--border-strong); border-radius: 4px; padding: 0.55rem 0.7rem; min-width: 0; max-width: 100%; }
+  textarea { width: 100%; min-height: 130px; resize: vertical; font-family: "IBM Plex Mono", monospace; font-size: 14px; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--raider); outline-offset: 1px; border-color: var(--raider); }
+
+  .dropzone { border: 2px dashed var(--border-strong); border-radius: 4px; padding: 1.75rem 1.5rem; text-align: center; background: var(--bg-elev); cursor: pointer; transition: border-color .15s, background .15s; display: block; }
+  .dropzone:hover, .dropzone.drag-over { border-color: var(--raider); background: var(--raider-tint); }
+  .dropzone .primary-text { font-size: 1.15rem; font-weight: 600; margin-bottom: 0.2rem; }
+  .dropzone .secondary-text { color: var(--text-mute); font-size: 15px; }
+  .dropzone .browse-link { color: var(--raider); text-decoration: underline; }
+  .dropzone input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+  .loaded { margin-top: 0.9rem; display: flex; gap: 0.5rem 1.25rem; flex-wrap: wrap; font-size: 16px; padding: 0.7rem 0.9rem; border: 1px solid var(--border); border-left: 4px solid var(--ok); border-radius: 4px; background: var(--bg-elev); }
+  .loaded:empty { display: none; }
+  .loaded b { font-variant-numeric: tabular-nums; }
+
+  /* ===== Lookup ===== */
+  .lookup-box { border: 2px solid var(--raider); border-radius: 6px; padding: 1.1rem; background: var(--bg-elev); display: grid; gap: 0.8rem; }
+  .lookup-box input[type="search"] { font-size: 20px; padding: 0.8rem 1rem; width: 100%; }
+  .qmeta { font-size: 15px; color: var(--text-mute); }
+  .qlist { display: grid; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); }
+  .qrow { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1.4fr) auto; gap: 4px 16px; padding: 0.7rem 1rem; border-bottom: 1px solid var(--border); align-items: baseline; }
+  .qrow:last-child { border-bottom: 0; }
+  .qrow .qroom { font: 700 26px/1.05 "IBM Plex Mono", monospace; color: var(--text); }
+  .qrow .qbldg { font-size: 14px; color: var(--text-mute); }
+  @media (max-width: 720px) { .qrow { grid-template-columns: 1fr 1fr; } }
+  .empty { padding: 1rem; background: var(--bg-card); color: var(--text-mute); font-size: 15px; border-radius: 4px; }
+
+  /* ===== Bulk mode ===== */
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: start; }
+  @media (max-width: 760px) { .two { grid-template-columns: 1fr; } }
+  .card { border: 1px solid var(--border); border-radius: 6px; padding: 1rem; background: var(--bg-elev); display: grid; gap: 0.8rem; min-width: 0; }
+  .bm-link { display: inline-flex; align-items: center; gap: 0.5rem; font: 600 16px/1 "Segoe UI", sans-serif; color: #fff; background: #2a2a2a; border: 2px dashed var(--raider); border-radius: 6px; padding: 0.7rem 1rem; text-decoration: none; cursor: grab; }
+  .bm-code { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; min-height: 70px; }
+  .tablewrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); }
+  table { border-collapse: collapse; width: 100%; font-size: 15px; }
+  th { text-align: left; font: 600 13px/1.2 "IBM Plex Mono", monospace; letter-spacing: .08em; text-transform: uppercase; color: var(--text-mute); background: var(--bg-card); padding: 0.55rem 0.7rem; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 0.55rem 0.7rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+  tr.off td, tr.off td .who { color: var(--text-mute); }
+  td.time { font-variant-numeric: tabular-nums; white-space: nowrap; font-weight: 600; }
+  .who { font-weight: 600; color: var(--text); }
+  .small { font-size: 14px; color: var(--text-mute); }
+  .src { font-size: 14px; color: var(--text-mute); font-family: "IBM Plex Mono", monospace; word-break: break-word; }
+  .room { white-space: nowrap; font-weight: 700; }
+  td input[type="search"] { width: 15rem; }
+  td select { max-width: 15rem; }
+  .cb { width: 20px; height: 20px; accent-color: var(--raider); }
+  .tally { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+  .chip { display: inline-flex; align-items: center; font: 600 14px/1 "Segoe UI", sans-serif; padding: 0.3rem 0.55rem; border-radius: 99px; white-space: nowrap; }
+  .chip.ok { background: var(--ok-bg); color: var(--ok); }
+  .chip.warn { background: var(--warn-bg); color: var(--warn); }
+  .chip.bad { background: var(--bad-bg); color: var(--bad); }
+  .chip.info { background: var(--info-bg); color: var(--info); }
+  .chip.plain { background: var(--bg-card); color: var(--text-mute); }
+  .addrow { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1.4fr) auto; gap: 0.6rem; align-items: end; }
+  @media (max-width: 720px) { .addrow { grid-template-columns: 1fr 1fr; } }
+  details.skipped > summary { cursor: pointer; font-size: 15px; color: var(--text-mute); font-weight: 600; }
+  details.skipped ul { margin: 0.5rem 0 0; padding-left: 1.2rem; font-size: 14px; color: var(--text-mute); display: grid; gap: 2px; }
+  details.setup { border: 1px solid var(--border); border-radius: 6px; background: var(--bg-elev); }
+  details.setup > summary { cursor: pointer; padding: 0.7rem 1rem; font-weight: 600; }
+  details.setup > div { padding: 0 1rem 1rem; display: grid; gap: 0.7rem; }
+
+  .out { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 1.25rem; margin-top: 1rem; }
+  @media (max-width: 900px) { .out { grid-template-columns: 1fr; } }
+  .route h2 { font-size: 1.1rem; margin-bottom: 0.2rem; }
+  .route h3 { font-size: 15px; padding: 0.6rem 0 0.25rem; border-bottom: 2px solid var(--raider); }
+  .route ol { list-style: none; }
+  .route li { display: grid; grid-template-columns: 7rem minmax(0, 1fr); gap: 4px 12px; padding: 0.45rem 0; border-bottom: 1px solid var(--border); font-size: 15px; }
+  .route li .r { font-weight: 700; font-variant-numeric: tabular-nums; font-family: "IBM Plex Mono", monospace; }
+  .route li .t { color: var(--text-mute); font-size: 14px; }
+  .route li .names { display: grid; gap: 2px; }
+  .route section { margin-bottom: 0.75rem; }
+
+  /* The pass previews what prints: paper-white in both themes */
+  .slips { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; align-content: start; }
+  .slip { background: #fff; color: #1a1a1a; border: 1px dashed #9a9a9a; padding: 12px 14px; display: grid; gap: 6px; font: 13px/1.35 "Segoe UI", Arial, sans-serif; }
+  .slip .p-head { text-align: center; font-weight: 700; font-size: 13px; position: relative; }
+  .slip .p-stop { position: absolute; left: 0; top: 1px; font-size: 11px; font-weight: 600; color: #595959; }
+  .slip .p-top { display: flex; gap: 8px; justify-content: space-between; align-items: start; }
+  .slip .p-boxes { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; font-size: 11px; }
+  .slip .p-boxes li { display: flex; gap: 4px; align-items: center; white-space: nowrap; }
+  .slip .box { width: 11px; height: 11px; border: 1px solid #1a1a1a; display: inline-grid; place-items: center; font-size: 9px; line-height: 1; font-weight: 700; flex: none; }
+  .slip .p-crest { width: 26px; height: auto; flex: none; }
+  .slip .p-line { display: flex; gap: 5px; align-items: baseline; flex-wrap: wrap; }
+  .slip .p-line u, .slip .p-call u { text-decoration: none; border-bottom: 1px solid #1a1a1a; padding: 0 4px; font-weight: 700; min-width: 3.5rem; }
+  .slip .p-line u.blank { flex: 1; min-width: 6rem; height: 1em; }
+  .slip .p-big { font-weight: 700; }
+  .slip .p-big u { font-size: 15px; }
+  .slip .p-call { font-weight: 700; }
+  .slip .p-note { font-size: 11px; font-weight: 700; font-style: italic; text-decoration: underline; }
+
+  .site-footer { border-top: 1px solid var(--border); padding: 1.5rem 2rem; color: var(--text-dim); font-size: 15px; text-align: center; }
+  .site-footer a { color: var(--text-mute); text-decoration: none; border-bottom: 1px solid var(--border); }
+  .site-footer a:hover { color: var(--raider); border-color: var(--raider); }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/*RJMASTHEAD*/
+/* RJ Ed Tech masthead (suite standard, matches Raider Observation Console):
+   charcoal band + 6px Raider-red rule, full browser width; contents stay
+   aligned with the page column. Same in light and dark. */
+html{overflow-x:clip}
+.rj-masthead{position:relative;isolation:isolate;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+  padding-top:14px!important;padding-bottom:14px!important;margin-top:0!important;margin-bottom:34px!important;
+  border:0!important;background:none!important;color:#fff;color-scheme:dark}
+.rj-masthead{box-sizing:border-box;width:100vw;max-width:none!important;margin-left:calc(50% - 50vw)!important;margin-right:calc(50% - 50vw)!important;
+  padding-left:max(20px,calc((100vw - 1000px)/2))!important;padding-right:max(20px,calc((100vw - 1000px)/2))!important}
+.rj-masthead::before{content:"";position:absolute;z-index:-1;top:-64px;bottom:-6px;left:calc(50% - 50vw);right:calc(50% - 50vw);
+  background:#2a2a2a;border-bottom:6px solid #C11430}
+.rj-masthead>.head-row{flex:1;align-items:center}
+body:not(.fs) .rj-masthead .hl,body:not(.fs) .rj-masthead .header-left,body:not(.fs) .rj-masthead .title-lock{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;align-items:center!important;gap:13px!important;min-width:0}
+.rj-masthead .rj-mark{height:40px;width:auto;display:block;flex-shrink:0}
+.rj-masthead .brand,.rj-masthead h1{color:#fff!important;-webkit-text-fill-color:#fff!important;background:none!important;
+  font-size:20px!important;font-weight:700!important;line-height:1.15!important;letter-spacing:0!important;margin:0!important}
+.rj-masthead .accent{color:inherit!important;-webkit-text-fill-color:inherit!important}
+.rj-masthead .tagline,.rj-masthead .subtitle,.rj-masthead .rjm-sub{color:#b8b8b8!important;font-size:10.5px!important;font-weight:400!important;
+  letter-spacing:.14em!important;text-transform:uppercase;margin:3px 0 0!important;line-height:1.45!important}
+.rj-masthead .last-checked{color:#b8b8b8!important}
+.rj-masthead a{color:#f2f2f2!important}
+body:not(.fs) .rj-masthead button,body:not(.fs) .rj-masthead select{background:rgba(255,255,255,.08)!important;color:#f2f2f2!important;
+  border:1px solid rgba(255,255,255,.22)!important}
+body:not(.fs) .rj-masthead select option{background:#2a2a2a;color:#f2f2f2}
+.rj-masthead .hdr-txt{flex:1;min-width:0}
+.rj-masthead .hdr-txt .sub{color:#b8b8b8!important;font-size:10.5px!important;font-weight:400!important;letter-spacing:.14em!important;text-transform:uppercase;margin:3px 0 0!important;line-height:1.45!important}
+.rj-masthead label{color:#d8d8d8!important}
+.rj-masthead input{background:rgba(255,255,255,.08)!important;color:#f2f2f2!important;border:1px solid rgba(255,255,255,.22)!important}
+.rj-masthead input::placeholder{color:#9a9a9a}
+.rj-masthead .lang-globe{color:#f2f2f2}
+body.fs .rj-masthead{color-scheme:normal;margin-bottom:0!important}
+body.fs .rj-masthead::before{display:none}
+@media(max-width:600px){.rj-masthead .brand,.rj-masthead h1{font-size:17px!important}.rj-masthead>label{flex-basis:100%}}
+@media print{.rj-masthead::before{display:none}.rj-masthead,.rj-masthead .brand,.rj-masthead h1{color:#000!important;-webkit-text-fill-color:#000!important}}
+/*/RJMASTHEAD*/
+
+/*RJCONTRAST*/
+:where([data-theme="light"]) .site-footer{color:#6c6c6c}
+:where([data-theme="dark"]) h2.section .num{color:#ed516a}
+:where([data-theme="dark"]) .dropzone .browse-link{color:#ee5e76}
+:where([data-theme="dark"]) .site-footer{color:#888888}
+/*/RJCONTRAST*/
+
+/*RJTYPE*/ :where(body){line-height:1.5} /*/RJTYPE*/
+</style>
+<!-- Light/dark follows the operating system setting, like the rest of the suite. -->
+<script>
+(function(){
+  var mq = window.matchMedia("(prefers-color-scheme: dark)");
+  function apply(){ document.documentElement.setAttribute("data-theme", mq.matches ? "dark" : "light"); }
+  apply();
+  if (mq.addEventListener) mq.addEventListener("change", apply); else if (mq.addListener) mq.addListener(apply);
+})();
+</script>
+</head>
+<body>
+
+<header class="rj-masthead site-header">
+  <div class="header-left">
+    <img class="rj-mark" src="data:image/png;base64,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" alt="Regis Jesuit" />
+    <div class="header-text">
+      <div class="brand">Raider Pass Builder</div>
+      <div class="tagline">Counseling passes · tomorrow's 1st-block rooms</div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <p class="lead">Find any student's <strong>1st-block room for tomorrow</strong> in a second: load tomorrow's schedule once, then type a name. When you want, it can also make <strong>every pass for the day</strong>, filled in and sorted in walking order.</p>
+  <p class="safe">🔒 The schedule file is read on this computer only. Nothing is uploaded or saved, and it's gone when you close the page.</p>
+
+  <div class="banner" id="exampleBanner" hidden><span>You're looking at <b>example students</b> (made-up names). Load tomorrow's schedule in Step 1 to use real data.</span></div>
+  <div class="banner" id="dateBanner" data-tone="warn" hidden></div>
+
+  <!-- ===== Step 1 ===== -->
+  <section class="block" id="step1">
+    <h2 class="section"><span class="num">STEP 1</span> Get tomorrow's schedule from Blackbaud</h2>
+    <p class="section-sub">Do this once each afternoon. It takes about a minute.</p>
+    <details class="how" id="how1" open>
+      <summary>Show me how <span class="hint">(4 pictures)</span></summary>
+      <div class="how-body">
+        <ol class="howto">
+          <li>
+            <div class="h-title">Open the schedule report</div>
+            <div class="h-body">Click this button. It opens <b>Student Schedule For The Day</b> in myRJ in a new tab. Sign in if myRJ asks.</div>
+            <div style="margin-top:.6rem"><a class="btn" href="https://regisjesuit.myschoolapp.com/edu-lists/reportviewer?reportId=101&amp;addin=1" target="_blank" rel="noopener">Open the report in myRJ ↗</a></div>
+          </li>
+          <li>
+            <div class="h-title">Type tomorrow's date</div>
+            <div class="h-body">Click the <b>Date</b> box ①, delete the date that's there, and type tomorrow's date like <b>10/26/2026</b>. On a Friday, type Monday's date. Leave everything else as it is. Then click <b>View/Export</b> ②.</div>
+            <figure class="shot"><img src="img/bb-report.jpg" alt="The Student Schedule For The Day report in myRJ with the Date box and the View/Export button circled" loading="lazy"><figcaption>Leave Students on All Students.</figcaption></figure>
+          </li>
+          <li>
+            <div class="h-title">Choose Excel</div>
+            <div class="h-body">Click <b>Excel</b> ③. The file saves to your <b>Downloads</b> folder. It may take a few seconds.</div>
+            <figure class="shot"><img src="img/bb-export.jpg" alt="The View/Export menu open, with Excel circled" loading="lazy"></figure>
+          </li>
+          <li>
+            <div class="h-title">Bring the file here</div>
+            <div class="h-body">Come back to this tab. Click the box below ④ and pick the file from <b>Downloads</b> (it's the newest one, ending in <b>.xls</b>). You can also drag it onto the box.</div>
+            <figure class="shot"><img src="img/drop.jpg" alt="The Pass Builder's file box, circled" loading="lazy"><figcaption>When it works, you'll see tomorrow's date and the number of students.</figcaption></figure>
+          </li>
+        </ol>
+      </div>
+    </details>
+
+    <label class="dropzone" id="drop" for="schedFile">
+      <input type="file" id="schedFile" accept=".xls,.xlsx">
+      <div class="primary-text">Click here to choose the schedule file</div>
+      <div class="secondary-text">or drag it here from your Downloads folder · <span class="browse-link">browse</span></div>
+    </label>
+    <div class="loaded" id="schedFacts"></div>
+    <div class="actions" style="margin-top:.6rem"><button class="btn ghost" type="button" id="exampleBtn">Just looking? Try it with example students</button></div>
+  </section>
+
+  <!-- ===== Step 2 ===== -->
+  <section class="block" id="step2">
+    <h2 class="section"><span class="num">STEP 2</span> Look up each student on the counselors' calendars</h2>
+    <p class="section-sub">Go down each counselor's calendar for tomorrow. For every student, type the name here and copy the room onto the pass.</p>
+    <details class="how" id="how2">
+      <summary>Show me how <span class="hint">(3 pictures)</span></summary>
+      <div class="how-body">
+        <ol class="howto">
+          <li>
+            <div class="h-title">Open the counselor's calendar for tomorrow</div>
+            <div class="h-body">In Outlook, go to <b>Calendar</b>. Under <b>People's calendars</b>, tick the counselor ①. Then move to tomorrow with the arrow at the top of the calendar.</div>
+            <figure class="shot narrow"><img src="img/outlook-people.jpg" alt="Outlook's calendar list with People's calendars and a counselor's checkbox circled" loading="lazy"></figure>
+          </li>
+          <li>
+            <div class="h-title">Type the student's name</div>
+            <div class="h-body">Type part of the name in the big box ②, first or last name, in any order. Spelling doesn't have to be perfect. You can also paste a whole calendar line like <b>Check-In: First Last</b>. The 1st-block room appears in big letters ③, with the building, teacher and Red or White day.</div>
+            <figure class="shot"><img src="img/lookup.jpg" alt="The lookup box with a name typed and the room number circled" loading="lazy"><figcaption>Example student. Real names appear once you've loaded the schedule.</figcaption></figure>
+          </li>
+          <li>
+            <div class="h-title">Fill in the pass</div>
+            <div class="h-body">Write the teacher on <b>Delivered to</b> and the room on <b>Rm.</b> ④. The day color goes on <b>Day (Red/White)</b>.</div>
+            <figure class="shot"><img src="img/pass-fill.jpg" alt="A blank BD counseling pass with Delivered to and Rm. circled" loading="lazy"></figure>
+          </li>
+        </ol>
+      </div>
+    </details>
+
+    <div class="lookup-box">
+      <label class="field" for="qlook">Student name
+        <input type="search" id="qlook" placeholder="Type a first or last name" autocomplete="off" spellcheck="false">
+      </label>
+      <div class="qmeta" id="qDate"></div>
+      <div id="qres" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <!-- ===== Step 3 (optional) ===== -->
+  <section class="block" id="step3">
+    <h2 class="section"><span class="num">STEP 3</span> Make every pass at once <span class="opt">Optional</span></h2>
+    <p class="section-sub">Instead of looking students up one at a time, paste a counselor's whole calendar. The builder finds every student, fills in the passes on the BD/GD layout, and sorts them in walking order: BD from the Counseling Office, then SIC and Steele, ending in GD.</p>
+
+    <details class="how" id="how3">
+      <summary>Show me how <span class="hint">(5 pictures)</span></summary>
+      <div class="how-body">
+        <ol class="howto">
+          <li>
+            <div class="h-title">One time only: add the Copy calendar button to your favorites bar</div>
+            <div class="h-body">Drag the dark <b>Copy calendar</b> button below ① up onto your favorites bar ② and let go. If you don't see a favorites bar, press <span class="keys">Ctrl</span> + <span class="keys">Shift</span> + <span class="keys">B</span> first.</div>
+            <figure class="shot"><img src="img/bookmark.jpg" alt="The Copy calendar button with an arrow up to the Edge favorites bar" loading="lazy"><figcaption>You only do this once. The button stays on your favorites bar.</figcaption></figure>
+          </li>
+          <li>
+            <div class="h-title">Copy one counselor's calendar</div>
+            <div class="h-body">In Outlook, show <b>one</b> counselor's calendar on tomorrow (untick the others under People's calendars). Click <b>Copy calendar</b> on your favorites bar. A small message says how many entries it copied.</div>
+            <figure class="shot narrow"><img src="img/outlook-people.jpg" alt="Outlook's People's calendars list with one counselor ticked" loading="lazy"></figure>
+          </li>
+          <li>
+            <div class="h-title">Paste it here</div>
+            <div class="h-body">Pick the counselor's name ③, click in the big box and press <span class="keys">Ctrl</span> + <span class="keys">V</span>, then click <b>Add entries</b> ④. Do steps 2 and 3 again for each counselor.</div>
+            <figure class="shot"><img src="img/paste.jpg" alt="The counselor picker, paste box and Add entries button, circled" loading="lazy"></figure>
+          </li>
+          <li>
+            <div class="h-title">Check anything yellow</div>
+            <div class="h-body">Green <b>Ready</b> passes are done. A yellow <b>Confirm name</b> means the calendar spelling was off: check the student in the list ⑤ and tick the box. Staff meetings and personal events are skipped for you.</div>
+            <figure class="shot"><img src="img/review.jpg" alt="The review table with a Confirm name row circled" loading="lazy"></figure>
+          </li>
+          <li>
+            <div class="h-title">Print and deliver</div>
+            <div class="h-body">Click <b>Print passes</b> ⑥. Page 1 is your route, with a Done box for each stop. The passes print four to a page in the same order, so the stack is already sorted once you cut it.</div>
+            <figure class="shot"><img src="img/print.jpg" alt="The Print passes button circled, with the delivery route and pass previews" loading="lazy"></figure>
+          </li>
+        </ol>
+      </div>
+    </details>
+
+    <div class="two">
+      <div class="card">
+        <div class="actions">
+          <label class="field" for="counselorSel">Whose calendar is this?
+            <select id="counselorSel"></select>
+          </label>
+        </div>
+        <label class="field" for="calPaste">Paste the copied calendar here
+          <textarea id="calPaste" placeholder="Click here, then press Ctrl + V"></textarea>
+        </label>
+        <div class="actions">
+          <button class="btn" type="button" id="addEntriesBtn">Add entries</button>
+          <button class="btn ghost" type="button" id="clearEntriesBtn">Start over</button>
+        </div>
+        <span class="status" id="entryStatus"></span>
+      </div>
+      <div class="card">
+        <div class="h-title">The Copy calendar button</div>
+        <p class="small">Drag this onto your favorites bar once. Then click it whenever a counselor's calendar is open in Outlook on the web.</p>
+        <div><a class="bm-link" id="bmLink" href="#" title="Drag me to your favorites bar">⧉ Copy calendar</a></div>
+        <details class="setup">
+          <summary>Dragging doesn't work?</summary>
+          <div>
+            <p class="small">Right-click the favorites bar → <b>Add page</b>. Name it <b>Copy calendar</b>, paste this code into the URL box, and save.</p>
+            <textarea class="bm-code" id="bmCode" readonly aria-label="Copy calendar code"></textarea>
+            <div class="actions"><button class="btn ghost" type="button" id="copyBmBtn">Copy the code</button><span class="status" id="bmStatus"></span></div>
+          </div>
+        </details>
+        <details class="setup">
+          <summary>Counselor list (names on the pass, BD or GD)</summary>
+          <div>
+            <p class="small"><b>Calendar name</b> is how the counselor appears in Outlook. <b>Name on pass</b> is the box that gets checked. <b>Division</b> picks the BD or GD pass; <b>Both</b> puts the name on both passes.</p>
+            <div class="tablewrap"><table>
+              <thead><tr><th>Calendar name</th><th>Name on pass</th><th>Division</th><th></th></tr></thead>
+              <tbody id="counselorRows"></tbody>
+            </table></div>
+            <div class="actions"><button class="btn ghost" type="button" id="addCounselorBtn">Add a counselor</button></div>
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <div style="margin-top:1.5rem;display:grid;gap:.8rem">
+      <div class="actions" style="justify-content:space-between"><h3 class="h-title">Passes for tomorrow</h3><div class="tally" id="tally"></div></div>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Pass</th><th>Time</th><th>Student</th><th>Counselor</th><th>Deliver to (1st block)</th><th>Status</th><th>Calendar entry</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <div class="addrow">
+        <label class="field" for="addStudent">Add a pass by hand
+          <input type="search" id="addStudent" list="rosterList" placeholder="Start typing a last name" autocomplete="off">
+        </label>
+        <label class="field" for="addTime">Time
+          <input type="time" id="addTime" step="300">
+        </label>
+        <label class="field" for="addCounselor">Counselor
+          <select id="addCounselor"></select>
+        </label>
+        <button class="btn ghost" type="button" id="addManualBtn">Add pass</button>
+      </div>
+      <details class="skipped" id="skippedBox"><summary id="skippedSum">Skipped entries</summary><ul id="skippedList"></ul></details>
+      <datalist id="rosterList"></datalist>
+
+      <div class="actions" style="margin-top:.5rem">
+        <button class="btn big" type="button" id="printBtn">🖨 Print passes</button>
+        <button class="btn ghost" type="button" id="pdfBtn">Save PDF instead</button>
+        <button class="btn ghost" type="button" id="csvBtn">Delivery list (CSV)</button>
+        <span class="status" id="dlStatus"></span>
+      </div>
+      <div class="out">
+        <div class="route" id="route"></div>
+        <div class="slips" id="slips"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  Built for Regis Jesuit High School &middot;
+  <a href="https://github.com/RJEdTech/Raider-Pass-Builder" target="_blank" rel="noopener">View on GitHub</a>
+  &middot;
+  <a href="https://forms.microsoft.com/r/sKU9sHY45r" target="_blank" rel="noopener">Report a bug or request a tool</a>
+  <div style="margin-top:.4rem;font-size:14px">Your schedule file never leaves your computer · Anonymous page counts only</div>
+</footer>
+
+<script>
+// ---- Pass Builder core: report parsing, calendar parsing, name matching ----
+const PB = (() => {
+  const norm = s => String(s || '').normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z]/g, '');
+  const GRADE_WORDS = /^(freshman|freshmen|sophomore|junior|senior|9th|10th|11th|12th|fr|so|jr|sr)\b/i;
+
+  function fracToTime(f) {
+    let m = Math.round((((f % 1) + 1) % 1) * 1440);
+    let h = Math.floor(m / 60), mm = m % 60;
+    const ap = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return `${h}:${String(mm).padStart(2, '0')} ${ap}`;
+  }
+  function timeToMin(t) {
+    const m = /(\d{1,2}):(\d{2})\s*([AP])\.?M/i.exec(t || '');
+    if (!m) return null;
+    let h = +m[1] % 12; if (m[3].toUpperCase() === 'P') h += 12;
+    return h * 60 + +m[2];
+  }
+
+  // rows: array of arrays from SheetJS sheet_to_json(header:1)
+  function parseReport(rows) {
+    let date = null;
+    const students = [];
+    let cur = null;
+    for (const row of rows) {
+      const cells = row.map(c => (c == null ? '' : c));
+      const joined = cells.map(String).join(' ');
+      if (!date) {
+        const dm = /Schedule for the Day:\s*(\d{1,2})\/(\d{1,2})\/(\d{4})/i.exec(joined);
+        if (dm) { date = new Date(+dm[3], +dm[1] - 1, +dm[2]); continue; }
+      }
+      const gradeCell = cells.find(c => typeof c === 'string' && /Grade:/.test(c));
+      if (gradeCell && typeof cells[0] === 'string' && cells[0].includes(',')) {
+        const raw = cells[0].trim();
+        const comma = raw.indexOf(',');
+        const last = raw.slice(0, comma).trim();
+        const rest = raw.slice(comma + 1);
+        const pm = /\(([^)]*)\)/.exec(rest);
+        const ym = /'(\d\d)/.exec(rest);
+        const first = rest.replace(/\(.*?\)/g, '').replace(/'\d\d/, '').trim();
+        cur = {
+          last, first, pref: pm ? pm[1].trim() : '', year: ym ? ym[1] : '',
+          grade: (/Grade:\s*(\S+)/.exec(gradeCell) || [])[1] || '', classes: []
+        };
+        students.push(cur);
+        continue;
+      }
+      if (!cur || !cells[0] || cells[0] === 'Course') continue;
+      const start = parseFloat(cells[1]);
+      if (!isFinite(start)) continue;
+      cur.classes.push({
+        course: String(cells[0]).trim(), startMin: Math.round((((start % 1) + 1) % 1) * 1440),
+        start: fracToTime(start), end: fracToTime(parseFloat(cells[2])),
+        room: String(cells[3] || '').trim(), block: String(cells[4] || '').trim(), teacher: String(cells[5] || '').trim()
+      });
+    }
+    for (const s of students) {
+      s.classes.sort((a, b) => a.startMin - b.startMin);
+      s.firstClass = s.classes[0] || null;
+      s.display = `${s.pref || s.first.split(/\s+/)[0]} ${s.last}`;
+      s.keys = { last: norm(s.last), lastParts: s.last.split(/[\s-]+/).map(norm).filter(Boolean),
+        firsts: [norm(s.first.split(/\s+/)[0]), norm(s.first.replace(/\s+/g, '')), norm(s.pref)].filter(Boolean) };
+    }
+    return { date, students };
+  }
+
+  // Outlook web aria-label lines, or loose typed lines
+  const ARIA = /^(.*?),\s*(\d{1,2}:\d{2}\s*[AP]M)\s+to\s+(\d{1,2}:\d{2}\s*[AP]M),\s*(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),\s*([A-Z][a-z]+ \d{1,2}, \d{4})(.*)$/;
+  function parseCalendarText(text, defaultCounselor) {
+    const out = [];
+    const seen = new Set();
+    for (let line of String(text || '').split(/\r?\n/)) {
+      line = line.trim();
+      if (!line) continue;
+      line = line.replace(/^(Meeting icon|Car icon|Repeat icon|[A-Za-z]+ icon),\s*/i, '');
+      let ev;
+      const m = ARIA.exec(line);
+      if (m) {
+        const rest = m[5] || '';
+        const by = /,\s*By ([^,]+)/.exec(rest);
+        const cat = /Categorized as (.+)$/.exec(rest);
+        const restParts = rest.split(',').map(s => s.trim()).filter(Boolean);
+        const location = restParts.length && !/^(By |Busy|Free|Tentative|Out of office|Working elsewhere|Recurring|Exception|Categorized)/.test(restParts[0]) ? restParts[0] : '';
+        ev = { title: m[1].trim(), start: m[2].toUpperCase().replace(/\s+/, ' '), end: m[3].toUpperCase(), date: new Date(m[4]),
+          by: by ? by[1].trim() : '', categories: cat ? cat[1].trim() : '', location, free: /,\s*Free\b/.test(rest) };
+      } else {
+        const tm = /(\d{1,2}:\d{2})\s*([AP])\.?M\.?/i.exec(line);
+        if (!tm) continue;
+        const start = `${tm[1]} ${tm[2].toUpperCase()}M`;
+        let title = line.replace(tm[0], ' ').replace(/^[\s,|\t\-–]+|[\s,|\t\-–]+$/g, '').replace(/\s*[|\t]\s*/g, ', ');
+        ev = { title, start, end: '', date: null, by: '', categories: '', location: '', free: false, typed: true };
+      }
+      const key = [ev.title, ev.start, ev.date && ev.date.toDateString(), ev.by].join('|');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      ev.counselor = defaultCounselor || '';
+      ev.startMin = timeToMin(ev.start);
+      out.push(ev);
+    }
+    return out;
+  }
+
+  function lev(a, b) {
+    if (a === b) return 0;
+    const v = Array(b.length + 1).fill(0).map((_, i) => i);
+    for (let i = 1; i <= a.length; i++) {
+      let prev = v[0]; v[0] = i;
+      for (let j = 1; j <= b.length; j++) {
+        const tmp = v[j];
+        v[j] = Math.min(v[j] + 1, v[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+        prev = tmp;
+      }
+    }
+    return v[b.length];
+  }
+  const sim = (a, b) => 1 - lev(a, b) / Math.max(a.length, b.length, 1);
+
+  function matchName(piece, roster) {
+    const nick = (/["“”']([^"“”']{2,})["“”']/.exec(piece) || [])[1];
+    const clean = piece.replace(/["“”][^"“”]*["“”]/g, ' ').replace(/\(.*?\)/g, ' ').replace(/\./g, '. ').trim();
+    const toks = clean.split(/\s+/).filter(Boolean);
+    if (toks.length < 2) return { status: 'none', candidates: [] };
+    const f = norm(toks[0]);
+    const firsts = [f, norm(nick)].filter(Boolean);
+    const q = norm(toks.slice(1).join(''));
+    if (!q || q.length < 2) return { status: 'none', candidates: [] };
+    const lastOk = s => s.keys.last === q || s.keys.lastParts.includes(q) || (q.length >= 4 && s.keys.last.startsWith(q));
+    const firstOk = s => firsts.some(x => s.keys.firsts.some(c => c === x || (x.length === 1 ? c[0] === x : (c.startsWith(x) && x.length >= 2) || (x.startsWith(c) && c.length >= 3))));
+    const exact = roster.filter(s => lastOk(s) && firstOk(s));
+    if (exact.length === 1) return { status: 'auto', student: exact[0], candidates: exact };
+    if (exact.length > 1) return { status: 'ambiguous', candidates: exact };
+    // fuzzy suggestions
+    const target = f + q;
+    const scored = [];
+    for (const s of roster) {
+      let best = 0;
+      for (const fn of s.keys.firsts) best = Math.max(best, sim(target, fn + s.keys.last));
+      if (lastOk(s)) best = Math.max(best, 0.7);
+      if (best >= 0.72) scored.push([best, s]);
+    }
+    scored.sort((a, b) => b[0] - a[0]);
+    const cands = scored.slice(0, 3).map(x => x[1]);
+    return { status: cands.length ? 'suggest' : 'none', candidates: cands };
+  }
+
+  // Decide what an event is and which student(s) it names
+  function classify(ev, roster) {
+    let t = ev.title.trim();
+    if (/^cancel+ed:/i.test(t)) return { kind: 'canceled', people: [] };
+    const checkin = /check[\s-]?in/i.test(t);
+    let primary, others = [];
+    if (t.includes(':')) {
+      primary = t.slice(t.lastIndexOf(':') + 1);
+    } else {
+      const segs = t.split(/\s+[-–—]\s+/);
+      primary = segs[0];
+      others = segs.slice(1);
+    }
+    primary = primary.split(/\s+[-–—]\s+/)[0].replace(/\bcheck[\s-]?in\b.*$/i, '').trim();
+    const splitPeople = s => s.split(/\s*(?:\+|&|\/|,|\band\b)\s*/i).map(x => x.trim()).filter(Boolean);
+    const people = splitPeople(primary).map(p => ({ text: p, ...matchName(p, roster) })).filter(p => p.status !== 'none');
+    const hasPrefix = t.includes(':') || /\s[-–—]\s/.test(t) && !GRADE_WORDS.test((t.split(/\s+[-–—]\s+/)[1] || '').trim()) && !/student meeting/i.test(t);
+    if (people.length) {
+      if (checkin) return { kind: 'checkin', people };
+      if (!t.includes(':') && !hasPrefix) return { kind: 'name', people };
+      return { kind: 'other', people };
+    }
+    // name after a dash prefix, e.g. "Academic - First Last"
+    const alt = others.flatMap(splitPeople).map(p => ({ text: p, ...matchName(p, roster) })).filter(p => p.status !== 'none');
+    if (alt.length) return { kind: 'other', people: alt };
+    // looks like a student appointment but no roster match (misspelling, parent, non-student)
+    const nameLike = /^[A-Z][\w'’.-]*(\s+["“][^"”]+["”])?(\s+[A-Z][\w'’.-]*){1,3}$/.test(primary.trim());
+    const studentish = /student meeting/i.test(t) || GRADE_WORDS.test((others[0] || '').trim()) || /\bpasses\b/i.test(ev.categories) || /^check[\s-]?in:/i.test(t);
+    if ((checkin && (nameLike || studentish)) || (nameLike && studentish))
+      return { kind: 'unmatched', people: [{ text: primary.trim(), status: 'none', candidates: [] }] };
+    return { kind: 'ignore', people: [] };
+  }
+
+  return { norm, parseReport, parseCalendarText, classify, matchName, fracToTime, timeToMin };
+})();
+if (typeof module !== 'undefined') module.exports = PB;
+
+
+// ---------- state ----------
+const $ = id => document.getElementById(id);
+// Current counselors from the School Counseling resource board (Blackbaud), Oct 2026. Editable in step 2.
+const CREST = 'data:image/png;base64,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';
+const DEFAULT_COUNSELORS = [
+  { name: 'Katy Cummings', pass: 'Ms. Cummings', div: 'BD' },
+  { name: 'Faith Pakhuongte-Atchley', pass: 'Ms. Pakhuongte-Atchley', div: 'BD' },
+  { name: 'Sarah Milhollan', pass: 'Ms. Milhollan', div: 'BD' },
+  { name: 'Brian Merz-Hutchinson', pass: 'Mr. Merz-Hutchinson', div: 'BD' },
+  { name: 'John Buxton', pass: 'Mr. Buxton', div: 'BD' },
+  { name: 'Morgan Mornhinweg', pass: 'Ms. Mornhinweg', div: 'GD' },
+  { name: 'Suzanne Berry', pass: 'Ms. Berry', div: 'GD' },
+  { name: 'Ginger Brown', pass: 'Ms. Brown', div: 'GD' },
+  { name: 'Erin Noonan', pass: 'Ms. Noonan', div: 'GD' },
+  { name: 'Celeste Siade', pass: 'Ms. Siade', div: 'Both' },
+  { name: 'Myers Rhoad', pass: 'Ms. Rhoad', div: 'Both' }
+];
+const S = { report: null, example: true, events: [], overrides: {}, manual: [], counselors: DEFAULT_COUNSELORS.map(c => ({ ...c })) };
+try { const c = JSON.parse(localStorage.getItem('pb.counselors3') || 'null'); if (Array.isArray(c) && c.length && c.every(x => x && x.name)) S.counselors = c; } catch (e) {}
+const saveCounselors = () => { try { localStorage.setItem('pb.counselors3', JSON.stringify(S.counselors)); } catch (e) {} };
+const cByName = n => S.counselors.find(c => c.name.toLowerCase() === String(n || '').toLowerCase());
+const passName = n => (cByName(n) || {}).pass || n;
+const divOf = n => { const d = (cByName(n) || {}).div; return d === 'GD' ? 'GD' : 'BD'; };
+const dayColor = fc => { const m = /1\s*([RW])/i.exec(fc && fc.block || ''); return m ? (m[1].toUpperCase() === 'R' ? 'Red' : 'White') : ''; };
+const roomCode = r => roomParts(r).room;
+const leadTeacher = t => String(t || '').split(',')[0].replace(/\s*\(H\)\s*/i, '').trim();
+function checkboxList(div) {
+  return S.counselors.filter(c => c.div === div || c.div === 'Both').map(c => c.pass);
+}
+
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmtDate = d => d ? d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : '';
+const shortDate = d => d ? d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : '';
+const isoDate = d => d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` : 'passes';
+const label = s => `${s.last}, ${s.first}${s.pref && s.pref !== s.first ? ' (' + s.pref + ')' : ''} '${s.year} · Gr ${s.grade.replace(/\D/g, '')}`;
+const roomParts = r => { const i = r.indexOf(' - '); return i < 0 ? { bldg: r || 'No room listed', room: r || '—' } : { bldg: r.slice(0, i), room: r.slice(i + 3) }; };
+const natural = (a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+
+// ---------- example data (invented) ----------
+function exampleData() {
+  const mk = (last, first, pref, year, grade, room, course, teacher) => ({ last, first, pref, year, grade, classes: [{ course, startMin: 510, start: '8:30 AM', end: '9:50 AM', room, block: '4R-1R-3R', teacher }] });
+  const students = [
+    mk('Example', 'Avery', '', '29', '10th', 'Girls Bldg - G210', 'Chemistry-GD (2)', 'Sample Teacher'),
+    mk('Sample', 'Mateo', 'Teo', '30', '9th', 'Boys Bldg - B156', 'Algebra 1-BD (3)', 'Sample Teacher'),
+    mk('Placeholder', 'Jordan', '', '28', '11th', 'Science & Innovation Center - SIC238', 'Biology-BD (5)', 'Sample Teacher'),
+    mk('Testcase-Rivera', 'Lucia', '', '29', '10th', 'Girls Bldg - G109', 'Spanish 3-GD (1)', 'Sample Teacher'),
+    mk('Demo', 'Elizabeth', 'Lizzy', '28', '11th', 'Steele Center - P206', 'Drawing 2 (1)', 'Sample Teacher'),
+    mk('Mock', 'Henry', '', '27', '12th', 'Boys Bldg - B172', 'Economics-BD (2)', 'Sample Teacher')
+  ];
+  const d = new Date(); d.setDate(d.getDate() + 1); while ([0, 6].includes(d.getDay())) d.setDate(d.getDate() + 1);
+  const dl = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  const text = [
+    `Check-In: Avery Example, 9:00 AM to 9:15 AM, ${dl}, By Ginger Brown, Busy, Categorized as Passes`,
+    `Post Kairos Check-In: Lizzy Demmo, 11:45 AM to 12:00 PM, ${dl}, By Ginger Brown, Busy, Categorized as Passes`,
+    `Check-In: Lucia Testcase, 1:45 PM to 2:00 PM, ${dl}, By Ginger Brown, Busy, Categorized as Passes`,
+    `NHS Tutoring: Jordan Placeholder, 9:45 AM to 10:00 AM, ${dl}, By Ginger Brown, Busy, Categorized as Small Group`,
+    `Prefecting - GINGER, 8:00 AM to 8:25 AM, ${dl}, Busy, Recurring event, Categorized as Prefecting`
+  ].join('\n');
+  const text2 = [
+    `Teo Sample - freshman, 10:30 AM to 11:00 AM, ${dl}, BD counseling, Busy`,
+    `Henry Mock - senior, 12:15 PM to 12:45 PM, ${dl}, BD counseling, Busy`,
+    `Department Meeting, 8:30 AM to 9:50 AM, ${dl}, Siena Conference Room, Busy`
+  ].join('\n');
+  return { report: finishReport({ date: d, students }), text, text2 };
+}
+function finishReport(rep) {
+  for (const s of rep.students) {
+    s.classes.sort((a, b) => a.startMin - b.startMin);
+    s.firstClass = s.classes[0] || null;
+    s.display = `${s.pref || s.first.split(/\s+/)[0]} ${s.last}`;
+    s.keys = { last: PB.norm(s.last), lastParts: s.last.split(/[\s-]+/).map(PB.norm).filter(Boolean),
+      firsts: [PB.norm(s.first.split(/\s+/)[0]), PB.norm(s.first.replace(/\s+/g, '')), PB.norm(s.pref)].filter(Boolean) };
+  }
+  rep.students.forEach((s, i) => s.idx = i);
+  rep.firstStart = Math.min(...rep.students.map(s => s.firstClass ? s.firstClass.startMin : 9999));
+  return rep;
+}
+
+// ---------- building rows ----------
+function addEvents(text, counselor) {
+  const evs = PB.parseCalendarText(text, counselor);
+  const known = new Map(S.counselors.map(c => [c.name.toLowerCase(), c.name]));
+  let added = 0;
+  for (const ev of evs) {
+    if (ev.by && known.has(ev.by.toLowerCase())) ev.counselor = known.get(ev.by.toLowerCase());
+    const key = [ev.title, ev.start, ev.date && ev.date.toDateString()].join('|');
+    if (S.events.some(e => [e.title, e.start, e.date && e.date.toDateString()].join('|') === key)) continue;
+    S.events.push(ev); added++;
+  }
+  return { added, total: evs.length };
+}
+
+function buildRows() {
+  const rep = S.report, rows = [], skipped = [];
+  let otherDay = 0;
+  if (!rep) return { rows, skipped, otherDay };
+  S.events.forEach((ev, ei) => {
+    if (ev.date && rep.date && ev.date.toDateString() !== rep.date.toDateString()) { otherDay++; return; }
+    const c = PB.classify(ev, rep.students);
+    if (c.kind === 'ignore' || c.kind === 'canceled') { skipped.push({ ev, why: c.kind === 'canceled' ? 'Canceled' : 'No student found' }); return; }
+    c.people.forEach((p, pi) => {
+      const key = ei + ':' + pi;
+      let student = p.status === 'auto' ? p.student : (p.candidates[0] || null);
+      let include = (c.kind === 'checkin' || c.kind === 'name') && p.status === 'auto';
+      let status;
+      if (c.kind === 'other') status = { cls: 'info', text: 'Not a check-in' };
+      else if (p.status === 'auto') status = { cls: 'ok', text: 'Ready' };
+      else if (p.status === 'suggest') status = { cls: 'warn', text: 'Confirm name' };
+      else if (p.status === 'ambiguous') status = { cls: 'warn', text: 'Pick student' };
+      else status = { cls: 'bad', text: 'Not found' };
+      const o = S.overrides[key];
+      if (o) { if ('student' in o) student = o.student == null ? null : rep.students[o.student]; if ('include' in o) include = o.include; }
+      if (!student) include = false;
+      rows.push({ key, ev, kind: c.kind, match: p, student, include, status, time: ev.start, startMin: ev.startMin, counselor: ev.counselor });
+    });
+  });
+  S.manual.forEach((m, i) => {
+    const student = rep.students[m.student];
+    rows.push({ key: 'm:' + i, manual: true, ev: { title: 'Added by hand' }, kind: 'manual', match: { status: 'auto', candidates: [] }, student, include: m.include !== false,
+      status: { cls: 'plain', text: 'Added by hand' }, time: m.time, startMin: PB.timeToMin(m.time), counselor: m.counselor });
+  });
+  return { rows, skipped, otherDay };
+}
+
+const needsLook = r => r.status.cls === 'warn' || r.status.cls === 'bad';
+// Walking order, from the 2022 floor plans. Suzanne starts in BD Counseling (B169), works BD, then SIC and
+// Steele (between the divisions), and finishes in GD, the far end. Rooms not listed fall in after their building's list.
+const BUILDING_ORDER = ['Boys Bldg', 'Science & Innovation Center', 'Steele Center', 'Girls Bldg'];
+const WALK = {
+  'Boys Bldg': ['167', '165', '163', '161', '159', '157', '155', '153', '151', '150', '152A', '152', '152C', '154', '156', '158', '164', '166', '166D', '166E', '168', '170', '171', '172', '172A', '174', '176', '177', '178', '179', '180', '181', '182', '183', '184', '186', '187', '188', '189', '190',
+    '272', '271', '270', '268', '285', '275', '266', '264', '262', '260', '258', '256', '254', '250D', '250C', '250B', '250A', '250', '251', '255', '257', '259', '261', '263', '265', '267'],
+  'Science & Innovation Center': ['149', '151', '152', '141', '147', '136', '137', '224', '227', '229', '231', '232', '238', '246', '247', '248'],
+  'Steele Center': ['200', '204', '205', '206', '207', '212', '213', '216'],
+  'Girls Bldg': ['101', '103', '105', '107', '107B', '107C', '108', '109', '110', '111', '112', '113', '114', '115', '116', '117', '118A', '118B', '118', '119', '120', '121', '122', '124', '126', '127', '129',
+    '228', '227', '226', '224', '222', '220', '219', '218', '217', '216', '215', '214', '213', '212', '211', '210', '209', '207', '205', '203', '201']
+};
+const roomNum = code => String(code || '').replace(/^[A-Z]+/i, '');
+const floorOf = code => { const n = roomNum(code); return /^1/.test(n) ? '1st floor' : /^2/.test(n) ? '2nd floor' : ''; };
+function walkKey(room) {
+  const rp = roomParts(room), b = BUILDING_ORDER.indexOf(rp.bldg), list = WALK[rp.bldg] || [], i = list.indexOf(roomNum(rp.room).toUpperCase());
+  return { b: b < 0 ? 99 : b, i: i < 0 ? 999 : i, bldg: rp.bldg, room: rp.room };
+}
+function deliveryOrder(rows) {
+  const list = rows.filter(r => r.include && r.student).sort((a, b) => {
+    const ka = walkKey(a.student.firstClass ? a.student.firstClass.room : ''), kb = walkKey(b.student.firstClass ? b.student.firstClass.room : '');
+    return (ka.b - kb.b) || natural(ka.bldg, kb.bldg) || (ka.i - kb.i) || natural(ka.room, kb.room) || natural(a.student.last, b.student.last) || (a.startMin - b.startMin);
+  });
+  let stop = 0, last = null;
+  for (const r of list) { const rm = r.student.firstClass ? r.student.firstClass.room : ''; if (rm !== last) { stop++; last = rm; } r.stop = stop; }
+  return list;
+}
+
+// ---------- render ----------
+function counselorOptions(sel, value) {
+  sel.innerHTML = S.counselors.map(c => `<option${c.name === value ? ' selected' : ''}>${esc(c.name)}</option>`).join('');
+}
+function renderCounselors() {
+  $('counselorRows').innerHTML = S.counselors.map((c, i) => `<tr>
+    <td><input type="text" id="cn${i}" data-cf="name" data-ci="${i}" value="${esc(c.name)}" aria-label="Calendar name"></td>
+    <td><input type="text" id="cp${i}" data-cf="pass" data-ci="${i}" value="${esc(c.pass)}" aria-label="Name on pass"></td>
+    <td><select id="cd${i}" data-cf="div" data-ci="${i}" aria-label="Division"><option${c.div === 'BD' ? ' selected' : ''}>BD</option><option${c.div === 'GD' ? ' selected' : ''}>GD</option><option${c.div === 'Both' ? ' selected' : ''}>Both</option></select></td>
+    <td><button class="ghost" type="button" data-crm="${i}">Remove</button></td></tr>`).join('');
+}
+function render() {
+  const rep = S.report;
+  // facts + banners
+  $('exampleBanner').hidden = !S.example;
+  const db = $('dateBanner');
+  db.hidden = true;
+  if (rep) {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    $('schedFacts').innerHTML = `<span>Schedule for <b>${esc(fmtDate(rep.date))}</b></span><span><b>${rep.students.length.toLocaleString()}</b> students</span><span>1st block starts <b>${esc(PB.fracToTime(rep.firstStart / 1440))}</b></span>`;
+    if (!S.example && rep.date && rep.date <= today) { db.hidden = false; db.dataset.tone = 'warn'; db.textContent = `This export is for ${fmtDate(rep.date)}. Passes are for tomorrow, so rerun the report with tomorrow's date.`; }
+  } else $('schedFacts').innerHTML = '';
+  counselorOptions($('counselorSel'), $('counselorSel').value || (S.counselors[0] || {}).name);
+  counselorOptions($('addCounselor'), $('addCounselor').value || (S.counselors[0] || {}).name);
+  if (!document.activeElement || !document.activeElement.dataset || !document.activeElement.dataset.cf) renderCounselors();
+  $('rosterList').innerHTML = rep ? rep.students.map(s => `<option value="${esc(label(s))}"></option>`).join('') : '';
+
+  const { rows, skipped, otherDay } = buildRows();
+  S.lastRows = rows;
+  const ordered = [...rows].sort((a, b) => (needsLook(b) - needsLook(a)) || ((a.startMin ?? 9999) - (b.startMin ?? 9999)));
+  const tb = $('rows');
+  if (!rows.length) {
+    tb.innerHTML = `<tr><td colspan="7"><div class="empty">${rep ? 'No appointments yet. Paste calendar entries in step 2.' : 'Load the schedule export in step 1 first.'}</div></td></tr>`;
+  } else tb.innerHTML = ordered.map(r => {
+    const s = r.student, fc = s && s.firstClass;
+    let who;
+    if (r.manual || r.match.status === 'auto') who = s ? `<span class="who">${esc(s.display)}</span><div class="small">${esc(s.last)}, ${esc(s.first)} · Gr ${esc(s.grade.replace(/\D/g, ''))}</div>` : '';
+    else if (r.match.candidates.length) who = `<select data-pick="${r.key}" aria-label="Choose student for ${esc(r.match.text)}">${r.match.candidates.map(c => `<option value="${c.idx}"${s && c.idx === s.idx ? ' selected' : ''}>${esc(label(c))}</option>`).join('')}<option value="">Someone else…</option></select><div class="small">Calendar says “${esc(r.match.text)}”</div>`;
+    else who = `<input type="search" list="rosterList" data-find="${r.key}" placeholder="Find student" aria-label="Find student for ${esc(r.match.text)}"><div class="small">Calendar says “${esc(r.match.text)}”</div>`;
+    if (s && r.match.status !== 'auto' && !r.manual && !r.match.candidates.some(c => c.idx === s.idx)) who = `<span class="who">${esc(s.display)}</span><div class="small">Calendar says “${esc(r.match.text)}”</div>`;
+    const early = s && fc && r.startMin != null && r.startMin <= fc.startMin + 15 ? ' <span class="chip warn">Early: deliver first</span>' : '';
+    return `<tr class="${r.include ? '' : 'off'}">
+      <td><input type="checkbox" class="cb" data-inc="${r.key}" ${r.include ? 'checked' : ''} ${s ? '' : 'disabled'} aria-label="Make a pass"></td>
+      <td class="time">${esc(r.time || '')}</td>
+      <td>${who}</td>
+      <td><select data-coun="${r.key}" aria-label="Counselor">${S.counselors.map(c => c.name).concat(cByName(r.counselor) || !r.counselor ? [] : [r.counselor]).map(c => `<option${c === r.counselor ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select><div class="small">${esc(divOf(r.counselor))} pass</div></td>
+      <td>${fc ? `<span class="room">${esc(fc.room.replace(' - ', ' · '))}</span><div class="small">${esc(fc.teacher)} · ${esc(fc.course.replace(/-[BG]D\b/, ''))}</div>` : '<span class="small">—</span>'}</td>
+      <td><span class="chip ${r.status.cls}">${esc(r.status.text)}</span>${early}</td>
+      <td class="src">${esc(r.ev.title)}</td></tr>`;
+  }).join('');
+
+  const nReady = rows.filter(r => r.include && r.student).length, nLook = rows.filter(needsLook).filter(r => !r.include).length, nOff = rows.filter(r => !r.include && !needsLook(r)).length;
+  $('tally').innerHTML = `<span class="chip ok">${nReady} passes</span>${nLook ? `<span class="chip warn">${nLook} to check</span>` : ''}${nOff ? `<span class="chip plain">${nOff} not included</span>` : ''}${otherDay ? `<span class="chip plain">${otherDay} from other days ignored</span>` : ''}`;
+  $('skippedSum').textContent = `Skipped entries (${skipped.length}) — staff meetings, personal events, cancellations`;
+  $('skippedList').innerHTML = skipped.map(x => `<li>${esc(x.ev.start)} · ${esc(x.ev.title)}${x.why === 'Canceled' ? ' (canceled)' : ''}</li>`).join('');
+  $('skippedBox').hidden = !skipped.length;
+
+  // route + slips
+  const list = deliveryOrder(rows);
+  S.lastList = list;
+  const route = $('route');
+  if (!list.length) { route.innerHTML = '<div class="empty">The delivery route appears here once passes are checked.</div>'; $('slips').innerHTML = ''; }
+  else {
+    const sections = [];
+    for (const r of list) {
+      const rp = roomParts(r.student.firstClass.room), head = `${rp.bldg}${floorOf(rp.room) ? ' · ' + floorOf(rp.room) : ''}`;
+      let sec = sections.at(-1); if (!sec || sec.head !== head) { sec = { head, stops: [] }; sections.push(sec); }
+      let st = sec.stops.at(-1); if (!st || st.stop !== r.stop) { st = { stop: r.stop, room: rp.room, rows: [] }; sec.stops.push(st); }
+      st.rows.push(r);
+    }
+    const nStops = list.length ? list.at(-1).stop : 0;
+    route.innerHTML = `<h2>Delivery route · ${esc(shortDate(rep.date))}</h2><p class="small">${nStops} stops, starting from BD Counseling. BD first, then SIC and Steele, ending in GD.</p>` + sections.map(sec => `<section><h3>${esc(sec.head)}</h3><ol>${sec.stops.map(st =>
+      `<li><span class="r">${st.stop}. ${esc(st.room)}</span><span class="names">${st.rows.map(r => `<span><b>${esc(r.student.display)}</b> <span class="t">${esc(r.time)} · ${esc(r.counselor)}</span></span>`).join('')}<span class="t">${esc(leadTeacher(st.rows[0].student.firstClass.teacher))}</span></span></li>`).join('')}</ol></section>`).join('');
+    $('slips').innerHTML = list.map(r => { const fc = r.student.firstClass, div = divOf(r.counselor), me = passName(r.counselor).toLowerCase();
+      return `<div class="slip">
+      <div class="p-head"><span class="p-stop">Stop ${r.stop}</span>${esc(div)} COUNSELING PASS</div>
+      <div class="p-top"><ul class="p-boxes">${checkboxList(div).map(n => `<li><span class="box">${n.toLowerCase() === me ? '✕' : ''}</span>${esc(n)}</li>`).join('')}</ul><img src="${CREST}" alt="" class="p-crest"></div>
+      <div class="p-line">Date <u>${esc(shortDate(rep.date))}</u></div>
+      <div class="p-line p-big">Student Name <u>${esc(r.student.display)}</u></div>
+      <div class="p-call">Please come to the <span>${esc(div)} Counseling Office</span> today at: <u>${esc(r.time)}</u></div>
+      <div class="p-line">Message <u class="blank"></u></div>
+      <div class="p-line">Delivered to <u>${esc(leadTeacher(fc.teacher))}</u> Rm. <u>${esc(roomCode(fc.room))}</u></div>
+      <div class="p-line">Day (Red/White) <u>${esc(dayColor(fc))}</u></div>
+      <div class="p-note">If you are unable to keep this appointment, please stop by the Counseling Office to reschedule before leaving the building today.</div>
+      <div class="p-line">Student left the Office at <u class="blank"></u></div></div>`; }).join('');
+  }
+  $('pdfBtn').disabled = $('csvBtn').disabled = $('printBtn').disabled = !list.length;
+  quickLookup();
+}
+
+// ---------- events ----------
+$('rows').addEventListener('change', e => {
+  const t = e.target;
+  if (t.dataset.inc) setO(t.dataset.inc, { include: t.checked });
+  else if (t.dataset.pick) { if (t.value === '') { setO(t.dataset.pick, { student: null, include: false }); } else setO(t.dataset.pick, { student: +t.value, include: true }); }
+  else if (t.dataset.find) { const s = S.report.students.find(x => label(x) === t.value); if (s) setO(t.dataset.find, { student: s.idx, include: true }); return; }
+  else if (t.dataset.coun) {
+    const k = t.dataset.coun;
+    if (k.startsWith('m:')) S.manual[+k.slice(2)].counselor = t.value;
+    else S.events[+k.split(':')[0]].counselor = t.value;
+  }
+  render();
+});
+function setO(key, o) {
+  if (key.startsWith('m:')) { const m = S.manual[+key.slice(2)]; if ('include' in o) m.include = o.include; }
+  else S.overrides[key] = { ...(S.overrides[key] || {}), ...o };
+  render();
+}
+
+async function loadFile(file) {
+  const st = $('schedFacts');
+  st.innerHTML = '<span>Reading…</span>';
+  try {
+    if (!window.XLSX) throw new Error('The spreadsheet reader did not load. Check the internet connection and reload.');
+    const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true, defval: '' });
+    const rep = PB.parseReport(rows);
+    if (!rep.students.length) throw new Error('This file does not look like the Student Schedule For The Day report. Export that report to Excel and try again.');
+    if (S.example) { S.events = []; S.overrides = {}; S.manual = []; }
+    S.report = finishReport(rep); S.example = false; $('how1').open = false;
+    $('entryStatus').textContent = '';
+    render();
+  } catch (err) { st.innerHTML = `<span class="chip bad">${esc(err.message || String(err))}</span>`; }
+}
+$('schedFile').addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+const drop = $('drop');
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag-over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('drag-over'));
+drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('drag-over'); const f = e.dataTransfer.files[0]; if (f) loadFile(f); });
+
+$('addEntriesBtn').addEventListener('click', () => {
+  const txt = $('calPaste').value;
+  if (!txt.trim()) { $('entryStatus').textContent = 'Paste calendar entries first.'; return; }
+  if (!S.report) { $('entryStatus').textContent = 'Load the schedule export in step 1 first.'; return; }
+  const { added, total } = addEvents(txt, $('counselorSel').value);
+  $('calPaste').value = '';
+  $('entryStatus').textContent = total ? `Added ${added} entr${added === 1 ? 'y' : 'ies'} for ${$('counselorSel').value}${total > added ? ` (${total - added} already added)` : ''}.` : 'No calendar entries found in that text. Each line needs a time like 9:15 AM.';
+  render();
+});
+$('clearEntriesBtn').addEventListener('click', () => { S.events = []; S.overrides = {}; S.manual = []; $('entryStatus').textContent = 'Cleared.'; render(); });
+$('addCounselorBtn').addEventListener('click', () => {
+  S.counselors.push({ name: 'New Counselor', pass: 'Ms. ', div: 'GD' }); saveCounselors(); render();
+  const i = S.counselors.length - 1; const el = $('cn' + i); if (el) { el.focus(); el.select(); }
+});
+$('counselorRows').addEventListener('change', e => {
+  const t = e.target, i = +t.dataset.ci, f = t.dataset.cf;
+  if (!f || !S.counselors[i]) return;
+  const old = S.counselors[i].name;
+  S.counselors[i][f] = t.value.trim().replace(/\s+/g, ' ');
+  if (f === 'name' && old !== S.counselors[i].name) { for (const ev of S.events) if (ev.counselor === old) ev.counselor = S.counselors[i].name; for (const m of S.manual) if (m.counselor === old) m.counselor = S.counselors[i].name; }
+  saveCounselors(); t.blur(); render();
+});
+$('counselorRows').addEventListener('click', e => {
+  const i = e.target.dataset && e.target.dataset.crm;
+  if (i == null || S.counselors.length < 2) return;
+  S.counselors.splice(+i, 1); saveCounselors(); render();
+});
+$('addManualBtn').addEventListener('click', () => {
+  if (!S.report) return;
+  const s = S.report.students.find(x => label(x) === $('addStudent').value);
+  const tv = $('addTime').value;
+  if (!s || !tv) { $('addStudent').setCustomValidity(s ? '' : 'Pick a student from the list'); $('addStudent').reportValidity(); return; }
+  $('addStudent').setCustomValidity('');
+  const [h, m] = tv.split(':').map(Number);
+  S.manual.push({ student: s.idx, time: `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`, counselor: $('addCounselor').value, include: true });
+  $('addStudent').value = ''; $('addTime').value = '';
+  render();
+});
+
+// bookmark code
+const BM = String.raw`javascript:(()=>{const s=[...new Set([...document.querySelectorAll('[aria-label]')].map(e=>e.getAttribute('aria-label')).filter(t=>/\d{1,2}:\d{2} [AP]M to \d{1,2}:\d{2} [AP]M, [A-Z][a-z]+day, /.test(t)))];const d=document.createElement('textarea');d.value=s.join('\n');document.body.appendChild(d);d.select();document.execCommand('copy');d.remove();alert(s.length+' calendar entries copied. Paste them into the Counseling Pass Builder.');})();`;
+$('bmCode').value = BM;
+$('bmLink').setAttribute('href', BM);
+$('bmLink').addEventListener('click', e => { e.preventDefault(); $('bmStatus').textContent = 'Drag the button to your favorites bar instead of clicking it here.'; });
+$('copyBmBtn').addEventListener('click', () => {
+  const done = () => $('bmStatus').textContent = 'Copied.';
+  const fallback = () => { $('bmCode').focus(); $('bmCode').select(); $('bmStatus').textContent = 'Selected. Press Ctrl+C to copy.'; };
+  try { navigator.clipboard.writeText(BM).then(done, fallback); } catch (e) { fallback(); }
+});
+
+
+// ---------- quick lookup ----------
+function quickLookup() {
+  const out = $('qres'), rep = S.report, raw = $('qlook').value.trim();
+  $('qDate').textContent = rep ? `${S.example ? 'Example data · ' : ''}Schedule for ${fmtDate(rep.date)}` : '';
+  if (!rep) { out.innerHTML = '<div class="empty">Load tomorrow\'s schedule export first.</div>'; return; }
+  if (raw.length < 2) { out.innerHTML = `<div class="empty">${rep.students.length.toLocaleString()} students loaded. Start typing a name.</div>`; return; }
+  let hits = [];
+  // a pasted calendar entry or "First Last": use the same matching as the passes
+  const title = raw.replace(/,\s*\d{1,2}:\d{2}\s*[AP]M.*$/i, '');
+  const c = PB.classify({ title, categories: '' }, rep.students);
+  for (const p of c.people) for (const s of (p.student ? [p.student] : p.candidates)) if (!hits.includes(s)) hits.push(s);
+  // plain search on every name part
+  const terms = raw.toLowerCase().split(/[\s,]+/).map(PB.norm).filter(t => t.length >= 2);
+  if (terms.length) for (const s of rep.students) {
+    if (hits.length >= 12) break;
+    const hay = [s.last, s.first, s.pref].map(PB.norm).join(' ') + ' ' + s.keys.lastParts.join(' ');
+    if (terms.every(t => hay.includes(t)) && !hits.includes(s)) hits.push(s);
+  }
+  hits = hits.slice(0, 12);
+  if (!hits.length) { out.innerHTML = '<div class="empty">No student matches that. Try just the last name.</div>'; return; }
+  out.innerHTML = `<div class="qlist">${hits.map(s => { const fc = s.firstClass, rp = roomParts(fc ? fc.room : ''); return `<div class="qrow">
+    <div><span class="who">${esc(s.display)}</span><div class="small">${esc(s.last)}, ${esc(s.first)} · Gr ${esc(s.grade.replace(/\D/g, ''))}</div></div>
+    <div><span class="qroom">${esc(rp.room)}</span><div class="qbldg">${esc(rp.bldg)}${floorOf(rp.room) ? ' · ' + esc(floorOf(rp.room)) : ''}</div></div>
+    <div>${fc ? `${esc(leadTeacher(fc.teacher))}<div class="small">${esc(fc.course.replace(/-[BG]D\b/, ''))} · ${esc(fc.start)}</div>` : ''}</div>
+    <div>${fc && dayColor(fc) ? `<span class="chip ${dayColor(fc) === 'Red' ? 'bad' : 'plain'}">${dayColor(fc)} day</span>` : ''}</div></div>`; }).join('')}</div>`;
+}
+$('qlook').addEventListener('input', quickLookup);
+
+// ---------- downloads ----------
+
+function buildPdf() {
+  const { jsPDF } = window.jspdf;
+  const rep = S.report, list = S.lastList;
+  const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+  const RED = [196, 17, 48], INK = [37, 37, 37], GREY = [94, 101, 112];
+  // page 1+: delivery route
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...RED);
+  doc.text('COUNSELING PASSES · DELIVERY ROUTE', 40, 46);
+  doc.setFontSize(18); doc.setTextColor(...INK); doc.text(fmtDate(rep.date), 40, 70);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(...GREY);
+  doc.text(`${list.length} passes, ${list.length ? list.at(-1).stop : 0} stops · start at BD Counseling: BD, then SIC and Steele, ending in GD · deliver at the start of 1st block (${PB.fracToTime(rep.firstStart / 1440)})`, 40, 88);
+  const body = list.map(r => { const fc = r.student.firstClass, rp = roomParts(fc.room); const early = r.startMin != null && r.startMin <= fc.startMin + 15;
+    return [String(r.stop), rp.bldg + (floorOf(rp.room) ? ' ' + floorOf(rp.room).replace(' floor', '') : ''), rp.room, leadTeacher(fc.teacher), r.student.display + (early ? '  (EARLY)' : ''), r.student.grade.replace(/\D/g, ''), r.time, r.counselor, '']; });
+  doc.autoTable({ startY: 100, head: [['Stop', 'Building', 'Room', '1st block teacher', 'Student', 'Gr', 'Time', 'Counselor', 'Done']], body,
+    styles: { font: 'helvetica', fontSize: 9.5, cellPadding: 4, textColor: INK, lineColor: [218, 221, 227], lineWidth: 0.5 },
+    headStyles: { fillColor: [43, 51, 63], textColor: 255, fontStyle: 'bold' },
+    columnStyles: { 0: { cellWidth: 30, fontStyle: 'bold' }, 1: { cellWidth: 66 }, 2: { fontStyle: 'bold', cellWidth: 44 }, 4: { fontStyle: 'bold' }, 5: { cellWidth: 22 }, 6: { cellWidth: 54 }, 7: { cellWidth: 80 }, 8: { cellWidth: 32 } }, margin: { left: 36, right: 36 } });
+  // passes: 2 x 2 per letter page, laid out like BD_COUNSELING_PASS.docx
+  const M = 36, W = (612 - 2 * M) / 2, H = (792 - 2 * M) / 2, P = 16;
+  const field = (lab, val, x, y, end, opts = {}) => {
+    doc.setFont('helvetica', opts.labelBold ? 'bold' : 'normal'); doc.setFontSize(opts.size || 10); doc.setTextColor(...INK);
+    doc.text(lab, x, y);
+    const lx = x + doc.getTextWidth(lab) + 4;
+    doc.setDrawColor(...INK); doc.setLineWidth(0.6); doc.line(lx, y + 2, end, y + 2);
+    if (val) { doc.setFont('helvetica', 'bold'); doc.setFontSize(opts.valSize || 11); doc.text(doc.splitTextToSize(val, end - lx - 6)[0], lx + 3, y - 1); }
+    return lx;
+  };
+  list.forEach((r, i) => {
+    if (i % 4 === 0) {
+      doc.addPage();
+      doc.setDrawColor(160); doc.setLineDashPattern([4, 3], 0); doc.setLineWidth(0.6);
+      doc.line(306, 12, 306, 780); doc.line(12, 396, 600, 396); doc.setLineDashPattern([], 0);
+    }
+    const fc = r.student.firstClass, div = divOf(r.counselor), me = passName(r.counselor).toLowerCase();
+    const x = M + (i % 2) * W + P, y = M + Math.floor((i % 4) / 2) * H + P, R = x + W - 2 * P;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11.5); doc.setTextColor(...INK);
+    doc.text(`${div} COUNSELING PASS`, x + (W - 2 * P) / 2, y + 6, { align: 'center' });
+    doc.setFontSize(8); doc.setTextColor(...GREY); doc.text(`Stop ${r.stop}`, x, y + 6); doc.setTextColor(...INK);
+    // counselor checkboxes, two columns, crest at right
+    const names = checkboxList(div), colW = (W - 2 * P - 40) / 2;
+    doc.setFontSize(8.3);
+    names.forEach((n, k) => {
+      const bx = x + (k % 2) * colW, by = y + 22 + Math.floor(k / 2) * 13;
+      doc.setDrawColor(...INK); doc.setLineWidth(0.6); doc.rect(bx, by - 7, 8, 8);
+      if (n.toLowerCase() === me) { doc.setLineWidth(1.2); doc.line(bx + 1.5, by - 5.5, bx + 6.5, by - 0.5); doc.line(bx + 6.5, by - 5.5, bx + 1.5, by - 0.5); }
+      doc.setFont('helvetica', n.toLowerCase() === me ? 'bold' : 'normal');
+      let fs = 8.3; doc.setFontSize(fs); while (doc.getTextWidth(n) > colW - 14 && fs > 6) { fs -= 0.3; doc.setFontSize(fs); }
+      doc.text(n, bx + 12, by); doc.setFontSize(8.3);
+    });
+    try { doc.addImage(CREST, 'PNG', R - 26, y + 14, 26, 35); } catch (e) {}
+    let yy = y + 22 + Math.ceil(names.length / 2) * 13 + 14;
+    field('Date', fmtDate(rep.date).replace(/, \d{4}$/, ''), x, yy, x + 170);
+    yy += 26; field('Student Name', r.student.display, x, yy, R, { labelBold: true, valSize: 13 });
+    yy += 24; doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...INK);
+    doc.text(`Please come to the ${div} Counseling Office today at:`, x, yy);
+    yy += 20; doc.setLineWidth(0.6); doc.line(x, yy + 2, x + 110, yy + 2); doc.setFontSize(14); doc.text(r.time, x + 4, yy - 1);
+    yy += 24; field('Message', '', x, yy, R);
+    yy += 16; doc.line(x, yy + 2, R - 40, yy + 2);
+    yy += 24; const rmX = R - 70;
+    field('Delivered to', leadTeacher(fc.teacher), x, yy, rmX - 6);
+    field('Rm.', roomCode(fc.room), rmX, yy, R);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...GREY); doc.text('Teacher', x + 90, yy + 10);
+    yy += 24; field('Day (Red/White)', dayColor(fc), x, yy, x + 190);
+    yy += 20; doc.setFont('helvetica', 'bolditalic'); doc.setFontSize(7.8); doc.setTextColor(...INK);
+    doc.text(doc.splitTextToSize('If you are unable to keep this appointment, please stop by the Counseling Office to reschedule before leaving the building today.', W - 2 * P), x, yy);
+    yy += 30; field('Student left the Office at', '', x, yy, x + 210);
+  });
+  return doc.output('blob');
+}
+let lastPdfUrl = null;
+function pdfUrl() {
+  if (lastPdfUrl) URL.revokeObjectURL(lastPdfUrl);
+  lastPdfUrl = URL.createObjectURL(buildPdf());
+  return lastPdfUrl;
+}
+function printUrl(url) {
+  let f = document.getElementById('printFrame'); if (f) f.remove();
+  f = document.createElement('iframe'); f.id = 'printFrame';
+  f.style.cssText = 'position:fixed;right:0;bottom:0;width:1px;height:1px;border:0;opacity:0';
+  f.onload = () => { setTimeout(() => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) { window.open(url, '_blank', 'noopener'); } }, 300); };
+  f.src = url; document.body.appendChild(f);
+}
+function save(filename, data) {
+  const url = typeof data === 'string' && data.startsWith('blob:') ? data : URL.createObjectURL(data instanceof Blob ? data : new Blob([data], { type: 'text/csv' }));
+  const a = document.createElement('a'); a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  $('dlStatus').textContent = `Saved ${filename} to your Downloads folder.`;
+}
+const libsReady = () => { if (!window.jspdf) { $('dlStatus').textContent = 'The PDF maker did not load. Check the internet connection and reload the page.'; return false; } return true; };
+$('printBtn').addEventListener('click', () => { if (!libsReady() || !S.lastList.length) return; printUrl(pdfUrl()); $('dlStatus').textContent = 'Opening the print window… If nothing appears, use Save PDF instead.'; });
+$('pdfBtn').addEventListener('click', () => { if (!libsReady() || !S.lastList.length) return; save(`Counseling passes ${isoDate(S.report.date)}.pdf`, pdfUrl()); });
+$('csvBtn').addEventListener('click', () => {
+  const q = v => `"${String(v).replace(/"/g, '""')}"`;
+  const lines = [['Building', 'Room', '1st block teacher', 'Student', 'Last', 'First', 'Grade', 'Time', 'Counselor'].map(q).join(',')]
+    .concat(S.lastList.map(r => { const fc = r.student.firstClass, rp = roomParts(fc.room); return [rp.bldg, rp.room, fc.teacher, r.student.display, r.student.last, r.student.first, r.student.grade, r.time, r.counselor].map(q).join(','); }));
+  save(`Counseling delivery list ${isoDate(S.report.date)}.csv`, lines.join('\r\n'));
+});
+
+// ---------- start ----------
+function loadExample() { const ex = exampleData(); S.example = true; S.events = []; S.overrides = {}; S.manual = []; S.report = ex.report; addEvents(ex.text, 'Ginger Brown'); addEvents(ex.text2, 'John Buxton'); render(); }
+$('exampleBtn').addEventListener('click', () => { loadExample(); $('qlook').value = 'Teo'; quickLookup(); $('qlook').focus(); });
+S.example = false; S.lastList = [];
+render();
+
+</script>
+<!-- Anonymous page-view count (GoatCounter): no cookies, no personal data, no file contents. -->
+<script data-goatcounter="https://rjedtech.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>
