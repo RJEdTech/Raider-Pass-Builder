@@ -71,13 +71,14 @@
   details.how > .how-body { padding: 0.25rem 1rem 1.25rem; }
 
   ol.howto { list-style: none; display: flex; flex-direction: column; gap: 1.5rem; counter-reset: s; }
-  ol.howto > li { counter-increment: s; display: grid; grid-template-columns: 34px 1fr; gap: 0.25rem 0.9rem; }
-  ol.howto > li::before { content: counter(s); grid-row: span 3; font-family: "IBM Plex Mono", monospace; font-weight: 600; background: var(--text); color: var(--bg); width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; margin-top: 2px; }
+  ol.howto > li { counter-increment: s; display: grid; grid-template-columns: 34px 1fr; column-gap: 0.9rem; row-gap: 0; }
+  ol.howto > li > * + * { margin-top: 0.3rem; }
+  ol.howto > li > * { grid-column: 2; min-width: 0; }
+  ol.howto > li::before { content: counter(s); grid-column: 1; grid-row: 1 / span 8; align-self: start; font-family: "IBM Plex Mono", monospace; font-weight: 600; background: var(--text); color: var(--bg); width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; margin-top: 2px; }
   .h-title { font-weight: 600; font-size: 1.05rem; }
   .h-body { color: var(--text-mute); max-width: 680px; }
   .h-body b { color: var(--text); font-weight: 600; }
-  figure.shot { margin-top: 0.6rem; border: 1px solid var(--border-strong); border-radius: 4px; overflow: hidden; background: #fff; max-width: 680px; }
-  figure.shot.narrow { max-width: 340px; }
+  figure.shot { margin-top: 0.6rem; border: 1px solid var(--border-strong); border-radius: 4px; overflow: hidden; background: #fff; }
   figure.shot img { display: block; width: 100%; height: auto; }
   figure.shot figcaption { font-size: 15px; color: var(--text-mute); background: var(--bg-elev); border-top: 1px solid var(--border); padding: 0.45rem 0.75rem; }
   .keys { font-family: "IBM Plex Mono", monospace; font-size: 0.85em; border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 4px; padding: 0 6px; background: var(--bg-elev); color: var(--text); white-space: nowrap; }
@@ -123,6 +124,13 @@
   .two { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: start; }
   @media (max-width: 760px) { .two { grid-template-columns: 1fr; } }
   .card { border: 1px solid var(--border); border-radius: 6px; padding: 1rem; background: var(--bg-elev); display: grid; gap: 0.8rem; min-width: 0; }
+  h3.sub-h { font-size: 1.1rem; font-weight: 600; margin: 1.75rem 0 0.9rem; padding-bottom: 0.35rem; border-bottom: 2px solid var(--raider); max-width: 760px; }
+  ol.plain { padding-left: 1.3rem; display: grid; gap: 0.3rem; font-size: 15px; }
+  .steps-nav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.5rem; margin-bottom: 2rem; }
+  .steps-nav a { display: flex; gap: 0.5rem; align-items: center; padding: 0.6rem 0.75rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-elev); color: var(--text); text-decoration: none; font-size: 15px; font-weight: 600; }
+  .steps-nav a:hover { border-color: var(--raider); }
+  .steps-nav b { font-family: "IBM Plex Mono", monospace; background: var(--raider); color: #fff; width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; flex: none; font-size: 14px; }
+  @media (max-width: 760px) { .steps-nav { grid-template-columns: 1fr 1fr; } }
   .bm-link { display: inline-flex; align-items: center; gap: 0.5rem; font: 600 16px/1 "Segoe UI", sans-serif; color: #fff; background: #2a2a2a; border: 2px dashed var(--raider); border-radius: 6px; padding: 0.7rem 1rem; text-decoration: none; cursor: grab; }
   .bm-code { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; min-height: 70px; }
   .tablewrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); }
@@ -257,135 +265,113 @@ body.fs .rj-masthead::before{display:none}
 </header>
 
 <main>
-  <p class="lead">Find any student's <strong>1st-block room for tomorrow</strong> in a second: load tomorrow's schedule once, then type a name. When you want, it can also make <strong>every pass for the day</strong>, filled in and sorted in walking order.</p>
-  <p class="safe">🔒 The schedule file is read on this computer only. Nothing is uploaded or saved, and it's gone when you close the page.</p>
+  <p class="lead">Every student on tomorrow's counselor calendars, with their <strong>1st-block room</strong>, in about five minutes. It can also print <strong>every pass for the day</strong>, filled in and sorted in walking order.</p>
+  <p class="safe">🔒 Student schedules and appointments are read on this computer only. Nothing is uploaded or saved, and it's all gone when you close the page.</p>
 
-  <div class="banner" id="exampleBanner" hidden><span>You're looking at <b>example students</b> (made-up names). Load tomorrow's schedule in Step 1 to use real data.</span></div>
+  <div class="banner" id="outlookBanner" hidden></div>
+  <div class="banner" id="exampleBanner" hidden><span>You're looking at <b>example students</b> (made-up names). Do Steps 1–3 to use real data.</span></div>
   <div class="banner" id="dateBanner" data-tone="warn" hidden></div>
+
+  <nav class="steps-nav" aria-label="Steps">
+    <a href="#step1"><b>1</b> Download tomorrow's schedule</a>
+    <a href="#step2"><b>2</b> Send the counselors' calendars</a>
+    <a href="#step3"><b>3</b> Add the schedule file</a>
+    <a href="#step4"><b>4</b> Check and print</a>
+  </nav>
 
   <!-- ===== Step 1 ===== -->
   <section class="block" id="step1">
-    <h2 class="section"><span class="num">STEP 1</span> Get tomorrow's schedule from Blackbaud</h2>
-    <p class="section-sub">Do this once each afternoon. It takes about a minute.</p>
-    <details class="how" id="how1" open>
-      <summary>Show me how <span class="hint">(4 pictures)</span></summary>
-      <div class="how-body">
-        <ol class="howto">
-          <li>
-            <div class="h-title">Open the schedule report</div>
-            <div class="h-body">Click this button. It opens <b>Student Schedule For The Day</b> in myRJ in a new tab. Sign in if myRJ asks.</div>
-            <div style="margin-top:.6rem"><a class="btn" href="https://regisjesuit.myschoolapp.com/edu-lists/reportviewer?reportId=101&amp;addin=1" target="_blank" rel="noopener">Open the report in myRJ ↗</a></div>
-          </li>
-          <li>
-            <div class="h-title">Type tomorrow's date</div>
-            <div class="h-body">Click the <b>Date</b> box ①, delete the date that's there, and type tomorrow's date like <b>10/26/2026</b>. On a Friday, type Monday's date. Leave everything else as it is. Then click <b>View/Export</b> ②.</div>
-            <figure class="shot"><img src="img/bb-report.jpg" alt="The Student Schedule For The Day report in myRJ with the Date box and the View/Export button circled" loading="lazy"><figcaption>Leave Students on All Students.</figcaption></figure>
-          </li>
-          <li>
-            <div class="h-title">Choose Excel</div>
-            <div class="h-body">Click <b>Excel</b> ③. The file saves to your <b>Downloads</b> folder. It may take a few seconds.</div>
-            <figure class="shot"><img src="img/bb-export.jpg" alt="The View/Export menu open, with Excel circled" loading="lazy"></figure>
-          </li>
-          <li>
-            <div class="h-title">Bring the file here</div>
-            <div class="h-body">Come back to this tab. Click the box below ④ and pick the file from <b>Downloads</b> (it's the newest one, ending in <b>.xls</b>). You can also drag it onto the box.</div>
-            <figure class="shot"><img src="img/drop.jpg" alt="The Pass Builder's file box, circled" loading="lazy"><figcaption>When it works, you'll see tomorrow's date and the number of students.</figcaption></figure>
-          </li>
-        </ol>
-      </div>
-    </details>
-
-    <label class="dropzone" id="drop" for="schedFile">
-      <input type="file" id="schedFile" accept=".xls,.xlsx">
-      <div class="primary-text">Click here to choose the schedule file</div>
-      <div class="secondary-text">or drag it here from your Downloads folder · <span class="browse-link">browse</span></div>
-    </label>
-    <div class="loaded" id="schedFacts"></div>
-    <div class="actions" style="margin-top:.6rem"><button class="btn ghost" type="button" id="exampleBtn">Just looking? Try it with example students</button></div>
+    <h2 class="section"><span class="num">STEP 1</span> Download tomorrow's schedule from myRJ</h2>
+    <p class="section-sub">This saves a file to your Downloads folder. You'll use it in Step 3.</p>
+    <ol class="howto">
+      <li>
+        <div class="h-title">Open the report</div>
+        <div class="h-body">Click this red button. myRJ opens the <b>Student Schedule For The Day</b> report in a new tab. Sign in if myRJ asks.</div>
+        <div style="margin-top:.6rem"><a class="btn" href="https://regisjesuit.myschoolapp.com/edu-lists/reportviewer?reportId=101&amp;addin=1" target="_blank" rel="noopener">Open the report in myRJ ↗</a></div>
+      </li>
+      <li>
+        <div class="h-title">Type tomorrow's date</div>
+        <div class="h-body">Click in the <b>Date</b> box ①. Delete the date that's there and type tomorrow's date, like <b>10/26/2026</b>. On a Friday, type Monday's date. Leave the other boxes as they are.</div>
+        <figure style="max-width:560px" class="shot"><img width="560" src="img/bb-report.png" alt="The Student Schedule For The Day report in myRJ with the Date box circled" loading="lazy"></figure>
+      </li>
+      <li>
+        <div class="h-title">Click View/Export, then Excel</div>
+        <div class="h-body">Click <b>View/Export</b> ②. A short list opens. Click <b>Excel</b> ③. The file saves to your <b>Downloads</b> folder in a few seconds. You can close the myRJ tab.</div>
+        <figure style="max-width:500px" class="shot"><img width="500" src="img/bb-export.png" alt="The View/Export menu open with Excel circled" loading="lazy"></figure>
+      </li>
+    </ol>
   </section>
 
   <!-- ===== Step 2 ===== -->
   <section class="block" id="step2">
-    <h2 class="section"><span class="num">STEP 2</span> Look up each student on the counselors' calendars</h2>
-    <p class="section-sub">Go down each counselor's calendar for tomorrow. For every student, type the name here and copy the room onto the pass.</p>
-    <details class="how" id="how2">
-      <summary>Show me how <span class="hint">(3 pictures)</span></summary>
-      <div class="how-body">
-        <ol class="howto">
-          <li>
-            <div class="h-title">Open the counselor's calendar for tomorrow</div>
-            <div class="h-body">In Outlook, go to <b>Calendar</b>. Under <b>People's calendars</b>, tick the counselor ①. Then move to tomorrow with the arrow at the top of the calendar.</div>
-            <figure class="shot narrow"><img src="img/outlook-people.jpg" alt="Outlook's calendar list with People's calendars and a counselor's checkbox circled" loading="lazy"></figure>
-          </li>
-          <li>
-            <div class="h-title">Type the student's name</div>
-            <div class="h-body">Type part of the name in the big box ②, first or last name, in any order. Spelling doesn't have to be perfect. You can also paste a whole calendar line like <b>Check-In: First Last</b>. The 1st-block room appears in big letters ③, with the building, teacher and Red or White day.</div>
-            <figure class="shot"><img src="img/lookup.jpg" alt="The lookup box with a name typed and the room number circled" loading="lazy"><figcaption>Example student. Real names appear once you've loaded the schedule.</figcaption></figure>
-          </li>
-          <li>
-            <div class="h-title">Fill in the pass</div>
-            <div class="h-body">Write the teacher on <b>Delivered to</b> and the room on <b>Rm.</b> ④. The day color goes on <b>Day (Red/White)</b>.</div>
-            <figure class="shot"><img src="img/pass-fill.jpg" alt="A blank BD counseling pass with Delivered to and Rm. circled" loading="lazy"></figure>
-          </li>
+    <h2 class="section"><span class="num">STEP 2</span> Send the counselors' calendars from Outlook</h2>
+    <p class="section-sub">One button in Outlook sends every counselor's appointments for tomorrow to this page at once. You set the button up one time; after that it's three clicks.</p>
+
+    <h3 class="sub-h">One time only: add the Send to Pass Builder button</h3>
+    <ol class="howto">
+      <li>
+        <div class="h-title">Show your favorites bar</div>
+        <div class="h-body">Look just under the web address at the top of Edge. You should see a row of favorites like <b>Mail</b>, <b>MyRJ</b> and <b>Canvas</b> ①. If you don't, press <span class="keys">Ctrl</span> + <span class="keys">Shift</span> + <span class="keys">B</span>.</div>
+        <figure style="max-width:680px" class="shot"><img width="680" src="img/favbar-show.png" alt="Edge with the favorites bar circled under the web address" loading="lazy"></figure>
+      </li>
+      <li>
+        <div class="h-title">Drag the button onto the bar</div>
+        <div class="h-body">Put your mouse on the dark <b>Send to Pass Builder</b> button below ②. Hold the left mouse button down, move the mouse up onto the favorites bar ③, and let go. The button now lives on your favorites bar.</div>
+        <div style="margin:.75rem 0"><a class="bm-link" id="bmLink" href="#" title="Drag me to your favorites bar">➜ Send to Pass Builder</a> <span class="status" id="bmStatus"></span></div>
+        <figure style="max-width:680px" class="shot"><img width="680" src="img/bookmark.png" alt="The Send to Pass Builder button with an arrow up to the favorites bar" loading="lazy"><figcaption>Clicking the button here on this page does nothing. It only works from the favorites bar, while Outlook is open.</figcaption></figure>
+        <details class="setup" style="margin-top:.6rem">
+          <summary>Dragging didn't work? Add it by hand</summary>
+          <div>
+            <ol class="plain">
+              <li>Click <b>Copy the code</b> below.</li>
+              <li>Right-click an empty spot on the favorites bar and choose <b>Add page</b> (it may say <b>Add favorite</b>).</li>
+              <li>In <b>Name</b>, type <b>Send to Pass Builder</b>.</li>
+              <li>Click in <b>URL</b>, delete what's there, and press <span class="keys">Ctrl</span> + <span class="keys">V</span>.</li>
+              <li>Click <b>Save</b>.</li>
+            </ol>
+            <textarea class="bm-code" id="bmCode" readonly aria-label="Send to Pass Builder code"></textarea>
+            <div class="actions"><button class="btn ghost" type="button" id="copyBmBtn">Copy the code</button></div>
+          </div>
+        </details>
+      </li>
+    </ol>
+
+    <h3 class="sub-h">Each afternoon</h3>
+    <ol class="howto">
+      <li>
+        <div class="h-title">In Outlook, tick every counselor's calendar</div>
+        <div class="h-body">Open <b>Calendar</b> in Outlook. In the list on the left, under <b>People's calendars</b>, put a tick next to <b>every counselor</b> ①. You can see all of them at once; the button sorts out whose appointment is whose.</div>
+        <figure style="max-width:242px" class="shot"><img width="242" src="img/ol-people.png" alt="Outlook's People's calendars list with the counselors' tick boxes circled" loading="lazy"></figure>
+      </li>
+      <li>
+        <div class="h-title">Untick your own calendar</div>
+        <div class="h-body">Scroll up in the same list to <b>My calendars</b> and take the tick off <b>Calendar</b> ②, so your own meetings stay out.</div>
+        <figure style="max-width:242px" class="shot"><img width="242" src="img/ol-mycal.png" alt="Outlook's My calendars list with the Calendar tick box circled" loading="lazy"></figure>
+      </li>
+      <li>
+        <div class="h-title">Go to tomorrow, in Day view</div>
+        <div class="h-body">At the top, click <b>Day</b> ③. Then click the <b>›</b> arrow ④ until the date shows tomorrow. On a Friday, go to Monday.</div>
+        <figure style="max-width:510px" class="shot"><img width="510" src="img/ol-day.png" alt="Outlook's toolbar with the Day button and the next-day arrow circled" loading="lazy"></figure>
+      </li>
+      <li>
+        <div class="h-title">Click Send to Pass Builder</div>
+        <div class="h-body">Click <b>Send to Pass Builder</b> on your favorites bar ⑤. A dark banner at the top of Outlook says how many appointments it sent ⑥, and this page opens in a new tab with them already in it.</div>
+        <figure style="max-width:680px" class="shot"><img width="680" src="img/favbar-send.png" alt="The Send to Pass Builder button on the favorites bar, circled" loading="lazy"></figure>
+        <figure style="max-width:680px" class="shot"><img width="680" src="img/sent-banner.png" alt="The dark banner in Outlook saying the appointments were sent" loading="lazy"><figcaption>If it says it found nothing, wait for the calendar to finish loading and click the button again.</figcaption></figure>
+      </li>
+    </ol>
+    <details class="setup" style="margin-top:1rem">
+      <summary>The Pass Builder tab didn't open? Paste instead</summary>
+      <div>
+        <ol class="plain">
+          <li>The button also copies the appointments. Come to this page.</li>
+          <li>Click in the box below and press <span class="keys">Ctrl</span> + <span class="keys">V</span>.</li>
+          <li>Click <b>Add entries</b>.</li>
         </ol>
-      </div>
-    </details>
-
-    <div class="lookup-box">
-      <label class="field" for="qlook">Student name
-        <input type="search" id="qlook" placeholder="Type a first or last name" autocomplete="off" spellcheck="false">
-      </label>
-      <div class="qmeta" id="qDate"></div>
-      <div id="qres" aria-live="polite"></div>
-    </div>
-  </section>
-
-  <!-- ===== Step 3 (optional) ===== -->
-  <section class="block" id="step3">
-    <h2 class="section"><span class="num">STEP 3</span> Make every pass at once <span class="opt">Optional</span></h2>
-    <p class="section-sub">Instead of looking students up one at a time, paste a counselor's whole calendar. The builder finds every student, fills in the passes on the BD/GD layout, and sorts them in walking order: BD from the Counseling Office, then SIC and Steele, ending in GD.</p>
-
-    <details class="how" id="how3">
-      <summary>Show me how <span class="hint">(5 pictures)</span></summary>
-      <div class="how-body">
-        <ol class="howto">
-          <li>
-            <div class="h-title">One time only: add the Copy calendar button to your favorites bar</div>
-            <div class="h-body">Drag the dark <b>Copy calendar</b> button below ① up onto your favorites bar ② and let go. If you don't see a favorites bar, press <span class="keys">Ctrl</span> + <span class="keys">Shift</span> + <span class="keys">B</span> first.</div>
-            <figure class="shot"><img src="img/bookmark.jpg" alt="The Copy calendar button with an arrow up to the Edge favorites bar" loading="lazy"><figcaption>You only do this once. The button stays on your favorites bar.</figcaption></figure>
-          </li>
-          <li>
-            <div class="h-title">Copy one counselor's calendar</div>
-            <div class="h-body">In Outlook, show <b>one</b> counselor's calendar on tomorrow (untick the others under People's calendars). Click <b>Copy calendar</b> on your favorites bar. A small message says how many entries it copied.</div>
-            <figure class="shot narrow"><img src="img/outlook-people.jpg" alt="Outlook's People's calendars list with one counselor ticked" loading="lazy"></figure>
-          </li>
-          <li>
-            <div class="h-title">Paste it here</div>
-            <div class="h-body">Pick the counselor's name ③, click in the big box and press <span class="keys">Ctrl</span> + <span class="keys">V</span>, then click <b>Add entries</b> ④. Do steps 2 and 3 again for each counselor.</div>
-            <figure class="shot"><img src="img/paste.jpg" alt="The counselor picker, paste box and Add entries button, circled" loading="lazy"></figure>
-          </li>
-          <li>
-            <div class="h-title">Check anything yellow</div>
-            <div class="h-body">Green <b>Ready</b> passes are done. A yellow <b>Confirm name</b> means the calendar spelling was off: check the student in the list ⑤ and tick the box. Staff meetings and personal events are skipped for you.</div>
-            <figure class="shot"><img src="img/review.jpg" alt="The review table with a Confirm name row circled" loading="lazy"></figure>
-          </li>
-          <li>
-            <div class="h-title">Print and deliver</div>
-            <div class="h-body">Click <b>Print passes</b> ⑥. Page 1 is your route, with a Done box for each stop. The passes print four to a page in the same order, so the stack is already sorted once you cut it.</div>
-            <figure class="shot"><img src="img/print.jpg" alt="The Print passes button circled, with the delivery route and pass previews" loading="lazy"></figure>
-          </li>
-        </ol>
-      </div>
-    </details>
-
-    <div class="two">
-      <div class="card">
-        <div class="actions">
-          <label class="field" for="counselorSel">Whose calendar is this?
-            <select id="counselorSel"></select>
-          </label>
-        </div>
-        <label class="field" for="calPaste">Paste the copied calendar here
+        <label class="field" for="counselorSel">Whose calendar? <span class="small" style="font-weight:400">(leave on “Work it out for me” if you ticked several)</span>
+          <select id="counselorSel"></select>
+        </label>
+        <label class="field" for="calPaste">Paste here
           <textarea id="calPaste" placeholder="Click here, then press Ctrl + V"></textarea>
         </label>
         <div class="actions">
@@ -394,33 +380,64 @@ body.fs .rj-masthead::before{display:none}
         </div>
         <span class="status" id="entryStatus"></span>
       </div>
-      <div class="card">
-        <div class="h-title">The Copy calendar button</div>
-        <p class="small">Drag this onto your favorites bar once. Then click it whenever a counselor's calendar is open in Outlook on the web.</p>
-        <div><a class="bm-link" id="bmLink" href="#" title="Drag me to your favorites bar">⧉ Copy calendar</a></div>
-        <details class="setup">
-          <summary>Dragging doesn't work?</summary>
-          <div>
-            <p class="small">Right-click the favorites bar → <b>Add page</b>. Name it <b>Copy calendar</b>, paste this code into the URL box, and save.</p>
-            <textarea class="bm-code" id="bmCode" readonly aria-label="Copy calendar code"></textarea>
-            <div class="actions"><button class="btn ghost" type="button" id="copyBmBtn">Copy the code</button><span class="status" id="bmStatus"></span></div>
-          </div>
-        </details>
-        <details class="setup">
-          <summary>Counselor list (names on the pass, BD or GD)</summary>
-          <div>
-            <p class="small"><b>Calendar name</b> is how the counselor appears in Outlook. <b>Name on pass</b> is the box that gets checked. <b>Division</b> picks the BD or GD pass; <b>Both</b> puts the name on both passes.</p>
-            <div class="tablewrap"><table>
-              <thead><tr><th>Calendar name</th><th>Name on pass</th><th>Division</th><th></th></tr></thead>
-              <tbody id="counselorRows"></tbody>
-            </table></div>
-            <div class="actions"><button class="btn ghost" type="button" id="addCounselorBtn">Add a counselor</button></div>
-          </div>
-        </details>
-      </div>
-    </div>
+    </details>
+  </section>
 
-    <div style="margin-top:1.5rem;display:grid;gap:.8rem">
+  <!-- ===== Step 3 ===== -->
+  <section class="block" id="step3">
+    <h2 class="section"><span class="num">STEP 3</span> Add the schedule file</h2>
+    <p class="section-sub">Do this in the Pass Builder tab that opened in Step 2.</p>
+    <ol class="howto">
+      <li>
+        <div class="h-title">Choose the file from Step 1</div>
+        <div class="h-body">Click the dashed box ①. A window opens on your <b>Downloads</b> folder. Click the newest file ending in <b>.xls</b>, then click <b>Open</b>.</div>
+        <figure style="max-width:680px" class="shot"><img width="680" src="img/drop.png" alt="The Pass Builder's file box, circled" loading="lazy"></figure>
+      </li>
+    </ol>
+    <label class="dropzone" id="drop" for="schedFile">
+      <input type="file" id="schedFile" accept=".xls,.xlsx">
+      <div class="primary-text">Click here to choose the schedule file</div>
+      <div class="secondary-text">or drag it here from your Downloads folder · <span class="browse-link">browse</span></div>
+    </label>
+    <div class="loaded" id="schedFacts"></div>
+    <div class="actions" style="margin-top:.6rem"><button class="btn ghost" type="button" id="exampleBtn">Just looking? Try it with example students</button></div>
+    <details id="how1" hidden></details>
+
+    <div class="lookup-box" style="margin-top:1.5rem">
+      <label class="field" for="qlook">Need just one student? Type a name
+        <input type="search" id="qlook" placeholder="First or last name" autocomplete="off" spellcheck="false">
+      </label>
+      <div class="qmeta" id="qDate"></div>
+      <div id="qres" aria-live="polite"></div>
+    </div>
+    <details class="setup" style="margin-top:.6rem">
+      <summary>How the one-student lookup works</summary>
+      <div>
+        <p class="small">Type part of the name, first or last, in any order. Spelling doesn't have to be perfect. The 1st-block room shows in big letters ②, with the building, teacher and Red or White day.</p>
+        <figure style="max-width:680px" class="shot"><img width="680" src="img/lookup.png" alt="The lookup box with a name typed and the room circled" loading="lazy"><figcaption>Example student.</figcaption></figure>
+        <p class="small">Writing passes by hand? Put the teacher on <b>Delivered to</b> and the room on <b>Rm.</b> ③.</p>
+        <figure style="max-width:420px" class="shot"><img width="420" src="img/pass-fill.png" alt="A blank BD counseling pass with Delivered to and Rm. circled" loading="lazy"></figure>
+      </div>
+    </details>
+  </section>
+
+  <!-- ===== Step 4 ===== -->
+  <section class="block" id="step4">
+    <h2 class="section"><span class="num">STEP 4</span> Check and print</h2>
+    <ol class="howto">
+      <li>
+        <div class="h-title">Check anything yellow</div>
+        <div class="h-body">Green <b>Ready</b> rows are done. A yellow <b>Confirm name</b> ① means the calendar spelling was a little off: look at the student the builder picked and tick the box if it's right, or pick someone else from the list. Staff meetings and personal events are left out for you.</div>
+        <figure style="max-width:680px" class="shot"><img width="680" src="img/review.png" alt="The list of passes with a Confirm name row circled" loading="lazy"></figure>
+      </li>
+      <li>
+        <div class="h-title">Print</div>
+        <div class="h-body">Click <b>Print passes</b> ②. In the print window, check the printer and click <b>Print</b>. Page 1 is your route, with a <b>Done</b> box for each stop. The passes come four to a page in the same order, so the stack is already sorted once you cut it.</div>
+        <figure style="max-width:680px" class="shot"><img width="680" src="img/print.png" alt="The Print passes button circled, with the delivery route and pass previews" loading="lazy"></figure>
+      </li>
+    </ol>
+
+    <div style="margin-top:1.25rem;display:grid;gap:.8rem">
       <div class="actions" style="justify-content:space-between"><h3 class="h-title">Passes for tomorrow</h3><div class="tally" id="tally"></div></div>
       <div class="tablewrap">
         <table>
@@ -454,6 +471,18 @@ body.fs .rj-masthead::before{display:none}
         <div class="slips" id="slips"></div>
       </div>
     </div>
+
+    <details class="setup" style="margin-top:1.5rem">
+      <summary>Counselor list (names on the pass, BD or GD, last-name ranges)</summary>
+      <div>
+        <p class="small"><b>Calendar name</b> is how the counselor appears in Outlook. <b>Name on pass</b> is the box that gets checked. <b>Division</b> picks the BD or GD pass; <b>Both</b> puts the name on both passes. <b>Last names</b> is the counselor's range from the School Counseling page; it's used when an appointment doesn't say whose it is.</p>
+        <div class="tablewrap"><table>
+          <thead><tr><th>Calendar name</th><th>Name on pass</th><th>Division</th><th>Last names</th><th></th></tr></thead>
+          <tbody id="counselorRows"></tbody>
+        </table></div>
+        <div class="actions"><button class="btn ghost" type="button" id="addCounselorBtn">Add a counselor</button></div>
+      </div>
+    </details>
   </section>
 </main>
 
@@ -654,22 +683,38 @@ const $ = id => document.getElementById(id);
 // Current counselors from the School Counseling resource board (Blackbaud), Oct 2026. Editable in step 2.
 const CREST = 'data:image/png;base64,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';
 const DEFAULT_COUNSELORS = [
-  { name: 'Katy Cummings', pass: 'Ms. Cummings', div: 'BD' },
-  { name: 'Faith Pakhuongte-Atchley', pass: 'Ms. Pakhuongte-Atchley', div: 'BD' },
-  { name: 'Sarah Milhollan', pass: 'Ms. Milhollan', div: 'BD' },
-  { name: 'Brian Merz-Hutchinson', pass: 'Mr. Merz-Hutchinson', div: 'BD' },
-  { name: 'John Buxton', pass: 'Mr. Buxton', div: 'BD' },
-  { name: 'Morgan Mornhinweg', pass: 'Ms. Mornhinweg', div: 'GD' },
-  { name: 'Suzanne Berry', pass: 'Ms. Berry', div: 'GD' },
-  { name: 'Ginger Brown', pass: 'Ms. Brown', div: 'GD' },
-  { name: 'Erin Noonan', pass: 'Ms. Noonan', div: 'GD' },
+  { name: 'Katy Cummings', pass: 'Ms. Cummings', div: 'BD', range: 'A-C' },
+  { name: 'Faith Pakhuongte-Atchley', pass: 'Ms. Pakhuongte-Atchley', div: 'BD', range: 'D-Hi' },
+  { name: 'Sarah Milhollan', pass: 'Ms. Milhollan', div: 'BD', range: 'Ho-Me' },
+  { name: 'Brian Merz-Hutchinson', pass: 'Mr. Merz-Hutchinson', div: 'BD', range: 'Mi-Sa' },
+  { name: 'John Buxton', pass: 'Mr. Buxton', div: 'BD', range: 'Sc-Z' },
+  { name: 'Morgan Mornhinweg', pass: 'Ms. Mornhinweg', div: 'GD', range: 'A-D' },
+  { name: 'Suzanne Berry', pass: 'Ms. Berry', div: 'GD', range: 'E-K' },
+  { name: 'Ginger Brown', pass: 'Ms. Brown', div: 'GD', range: 'L-R' },
+  { name: 'Erin Noonan', pass: 'Ms. Noonan', div: 'GD', range: 'S-Z' },
   { name: 'Celeste Siade', pass: 'Ms. Siade', div: 'Both' },
   { name: 'Myers Rhoad', pass: 'Ms. Rhoad', div: 'Both' }
 ];
 const S = { report: null, example: true, events: [], overrides: {}, manual: [], counselors: DEFAULT_COUNSELORS.map(c => ({ ...c })) };
-try { const c = JSON.parse(localStorage.getItem('pb.counselors3') || 'null'); if (Array.isArray(c) && c.length && c.every(x => x && x.name)) S.counselors = c; } catch (e) {}
-const saveCounselors = () => { try { localStorage.setItem('pb.counselors3', JSON.stringify(S.counselors)); } catch (e) {} };
+try { const c = JSON.parse(localStorage.getItem('pb.counselors4') || 'null'); if (Array.isArray(c) && c.length && c.every(x => x && x.name)) S.counselors = c; } catch (e) {}
+const saveCounselors = () => { try { localStorage.setItem('pb.counselors4', JSON.stringify(S.counselors)); } catch (e) {} };
 const cByName = n => S.counselors.find(c => c.name.toLowerCase() === String(n || '').toLowerCase());
+function studentDiv(st) {
+  let bd = 0, gd = 0;
+  for (const c of st.classes) { if (/-BD\b/.test(c.course)) bd++; if (/-GD\b/.test(c.course)) gd++; }
+  if (bd === gd) { const r = st.firstClass ? st.firstClass.room : ''; return /^Girls/.test(r) ? 'GD' : 'BD'; }
+  return gd > bd ? 'GD' : 'BD';
+}
+function alphaCounselor(st) {
+  const div = studentDiv(st), key = PB.norm(st.last);
+  for (const c of S.counselors) {
+    if (c.div !== div || !c.range) continue;
+    const [lo, hi] = c.range.split(/\s*[-–]\s*/).map(PB.norm);
+    if (!lo || !hi) continue;
+    if (key.slice(0, lo.length) >= lo && key.slice(0, hi.length) <= hi) return c.name;
+  }
+  return '';
+}
 const passName = n => (cByName(n) || {}).pass || n;
 const divOf = n => { const d = (cByName(n) || {}).div; return d === 'GD' ? 'GD' : 'BD'; };
 const dayColor = fc => { const m = /1\s*([RW])/i.exec(fc && fc.block || ''); return m ? (m[1].toUpperCase() === 'R' ? 'Red' : 'White') : ''; };
@@ -762,7 +807,9 @@ function buildRows() {
       const o = S.overrides[key];
       if (o) { if ('student' in o) student = o.student == null ? null : rep.students[o.student]; if ('include' in o) include = o.include; }
       if (!student) include = false;
-      rows.push({ key, ev, kind: c.kind, match: p, student, include, status, time: ev.start, startMin: ev.startMin, counselor: ev.counselor });
+      const oc = S.overrides[key] && S.overrides[key].counselor;
+      const auto = !oc && !ev.counselor && student ? alphaCounselor(student) : '';
+      rows.push({ key, ev, kind: c.kind, match: p, student, include, status, time: ev.start, startMin: ev.startMin, counselor: oc || ev.counselor || auto, autoC: !!auto });
     });
   });
   S.manual.forEach((m, i) => {
@@ -810,7 +857,8 @@ function renderCounselors() {
     <td><input type="text" id="cn${i}" data-cf="name" data-ci="${i}" value="${esc(c.name)}" aria-label="Calendar name"></td>
     <td><input type="text" id="cp${i}" data-cf="pass" data-ci="${i}" value="${esc(c.pass)}" aria-label="Name on pass"></td>
     <td><select id="cd${i}" data-cf="div" data-ci="${i}" aria-label="Division"><option${c.div === 'BD' ? ' selected' : ''}>BD</option><option${c.div === 'GD' ? ' selected' : ''}>GD</option><option${c.div === 'Both' ? ' selected' : ''}>Both</option></select></td>
-    <td><button class="ghost" type="button" data-crm="${i}">Remove</button></td></tr>`).join('');
+    <td><input type="text" id="cr${i}" data-cf="range" data-ci="${i}" value="${esc(c.range || '')}" size="6" aria-label="Last names"></td>
+    <td><button class="btn ghost" type="button" data-crm="${i}">Remove</button></td></tr>`).join('');
 }
 function render() {
   const rep = S.report;
@@ -823,7 +871,7 @@ function render() {
     $('schedFacts').innerHTML = `<span>Schedule for <b>${esc(fmtDate(rep.date))}</b></span><span><b>${rep.students.length.toLocaleString()}</b> students</span><span>1st block starts <b>${esc(PB.fracToTime(rep.firstStart / 1440))}</b></span>`;
     if (!S.example && rep.date && rep.date <= today) { db.hidden = false; db.dataset.tone = 'warn'; db.textContent = `This export is for ${fmtDate(rep.date)}. Passes are for tomorrow, so rerun the report with tomorrow's date.`; }
   } else $('schedFacts').innerHTML = '';
-  counselorOptions($('counselorSel'), $('counselorSel').value || (S.counselors[0] || {}).name);
+  { const v = $('counselorSel').value; counselorOptions($('counselorSel'), v); $('counselorSel').insertAdjacentHTML('afterbegin', `<option value=""${v ? '' : ' selected'}>Work it out for me</option>`); }
   counselorOptions($('addCounselor'), $('addCounselor').value || (S.counselors[0] || {}).name);
   if (!document.activeElement || !document.activeElement.dataset || !document.activeElement.dataset.cf) renderCounselors();
   $('rosterList').innerHTML = rep ? rep.students.map(s => `<option value="${esc(label(s))}"></option>`).join('') : '';
@@ -833,7 +881,7 @@ function render() {
   const ordered = [...rows].sort((a, b) => (needsLook(b) - needsLook(a)) || ((a.startMin ?? 9999) - (b.startMin ?? 9999)));
   const tb = $('rows');
   if (!rows.length) {
-    tb.innerHTML = `<tr><td colspan="7"><div class="empty">${rep ? 'No appointments yet. Paste calendar entries in step 2.' : 'Load the schedule export in step 1 first.'}</div></td></tr>`;
+    tb.innerHTML = `<tr><td colspan="7"><div class="empty">${rep ? 'No appointments yet. Do Step 2: click Send to Pass Builder in Outlook.' : (S.events.length ? `${S.events.length} appointments are waiting. Do Step 3 to see each student's room.` : 'Nothing here yet. Do Steps 1 to 3.')}</div></td></tr>`;
   } else tb.innerHTML = ordered.map(r => {
     const s = r.student, fc = s && s.firstClass;
     let who;
@@ -846,7 +894,7 @@ function render() {
       <td><input type="checkbox" class="cb" data-inc="${r.key}" ${r.include ? 'checked' : ''} ${s ? '' : 'disabled'} aria-label="Make a pass"></td>
       <td class="time">${esc(r.time || '')}</td>
       <td>${who}</td>
-      <td><select data-coun="${r.key}" aria-label="Counselor">${S.counselors.map(c => c.name).concat(cByName(r.counselor) || !r.counselor ? [] : [r.counselor]).map(c => `<option${c === r.counselor ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select><div class="small">${esc(divOf(r.counselor))} pass</div></td>
+      <td><select data-coun="${r.key}" aria-label="Counselor">${(r.counselor ? [] : ['']).concat(S.counselors.map(c => c.name), cByName(r.counselor) || !r.counselor ? [] : [r.counselor]).map(c => `<option${c === r.counselor ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select><div class="small">${r.counselor ? esc(divOf(r.counselor)) + ' pass' : 'Pick a counselor'}${r.autoC ? ' · matched by last name' : ''}</div></td>
       <td>${fc ? `<span class="room">${esc(fc.room.replace(' - ', ' · '))}</span><div class="small">${esc(fc.teacher)} · ${esc(fc.course.replace(/-[BG]D\b/, ''))}</div>` : '<span class="small">—</span>'}</td>
       <td><span class="chip ${r.status.cls}">${esc(r.status.text)}</span>${early}</td>
       <td class="src">${esc(r.ev.title)}</td></tr>`;
@@ -900,7 +948,7 @@ $('rows').addEventListener('change', e => {
   else if (t.dataset.coun) {
     const k = t.dataset.coun;
     if (k.startsWith('m:')) S.manual[+k.slice(2)].counselor = t.value;
-    else S.events[+k.split(':')[0]].counselor = t.value;
+    else S.overrides[k] = { ...(S.overrides[k] || {}), counselor: t.value };
   }
   render();
 });
@@ -920,7 +968,8 @@ async function loadFile(file) {
     const rep = PB.parseReport(rows);
     if (!rep.students.length) throw new Error('This file does not look like the Student Schedule For The Day report. Export that report to Excel and try again.');
     if (S.example) { S.events = []; S.overrides = {}; S.manual = []; }
-    S.report = finishReport(rep); S.example = false; $('how1').open = false;
+    S.rawRows = rows; S.report = finishReport(rep); S.example = false;
+    if (S.events.length) showOutlookBanner(`<span>✓ Schedule loaded and matched to <b>${S.events.length}</b> calendar entries.</span><span>Check them in <a href="#step4">Step 4</a>.</span>`);
     $('entryStatus').textContent = '';
     render();
   } catch (err) { st.innerHTML = `<span class="chip bad">${esc(err.message || String(err))}</span>`; }
@@ -934,10 +983,10 @@ drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('
 $('addEntriesBtn').addEventListener('click', () => {
   const txt = $('calPaste').value;
   if (!txt.trim()) { $('entryStatus').textContent = 'Paste calendar entries first.'; return; }
-  if (!S.report) { $('entryStatus').textContent = 'Load the schedule export in step 1 first.'; return; }
-  const { added, total } = addEvents(txt, $('counselorSel').value);
+  const who = $('counselorSel').value;
+  const { added, total } = addEvents(txt, who);
   $('calPaste').value = '';
-  $('entryStatus').textContent = total ? `Added ${added} entr${added === 1 ? 'y' : 'ies'} for ${$('counselorSel').value}${total > added ? ` (${total - added} already added)` : ''}.` : 'No calendar entries found in that text. Each line needs a time like 9:15 AM.';
+  $('entryStatus').textContent = total ? `Added ${added} appointment${added === 1 ? '' : 's'}${who ? ' for ' + who : ''}${total > added ? ` (${total - added} already added)` : ''}.${S.report ? '' : ' Now do Step 3.'}` : 'No calendar entries found in that text. Each line needs a time like 9:15 AM.';
   render();
 });
 $('clearEntriesBtn').addEventListener('click', () => { S.events = []; S.overrides = {}; S.manual = []; $('entryStatus').textContent = 'Cleared.'; render(); });
@@ -971,9 +1020,38 @@ $('addManualBtn').addEventListener('click', () => {
 });
 
 // bookmark code
-const BM = String.raw`javascript:(()=>{const s=[...new Set([...document.querySelectorAll('[aria-label]')].map(e=>e.getAttribute('aria-label')).filter(t=>/\d{1,2}:\d{2} [AP]M to \d{1,2}:\d{2} [AP]M, [A-Z][a-z]+day, /.test(t)))];const d=document.createElement('textarea');d.value=s.join('\n');document.body.appendChild(d);d.select();document.execCommand('copy');d.remove();alert(s.length+' calendar entries copied. Paste them into the Counseling Pass Builder.');})();`;
+const BM = String.raw`javascript:(()=>{const U='https://rjedtech.github.io/Raider-Pass-Builder/',O='https://rjedtech.github.io';const s=[...new Set([...document.querySelectorAll('[aria-label]')].map(e=>e.getAttribute('aria-label')).filter(t=>/\d{1,2}:\d{2} [AP]M to \d{1,2}:\d{2} [AP]M, [A-Z][a-z]+day, /.test(t)))];const b=document.createElement('div');b.style.cssText='position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:2147483647;background:#2a2a2a;color:#fff;border-bottom:5px solid #C11430;padding:14px 22px;font:600 16px Segoe UI,Arial,sans-serif;border-radius:6px;box-shadow:0 8px 28px rgba(0,0,0,.45);max-width:90vw';document.body.appendChild(b);const say=(t,ms)=>{b.textContent=t;if(ms)setTimeout(()=>b.remove(),ms)};if(!s.length){say('Raider Pass Builder: no appointments found. Wait for the calendar to finish loading, then click Send to Pass Builder again.',7000);return}const txt=s.join('\n');try{const d=document.createElement('textarea');d.value=txt;document.body.appendChild(d);d.select();document.execCommand('copy');d.remove()}catch(e){}say('Sending '+s.length+' appointments to Raider Pass Builder…');const w=window.open(U+'#outlook','_blank');let n=0,done=false;const t=setInterval(()=>{n++;try{w&&w.postMessage({type:'rpb-entries',text:txt},O)}catch(e){}if(n>40&&!done){clearInterval(t);say('Raider Pass Builder did not open. Open it yourself and paste with Ctrl + V (the appointments are copied).',10000)}},500);addEventListener('message',e=>{if(e.origin===O&&e.data&&e.data.type==='rpb-ok'&&!done){done=true;clearInterval(t);say('Sent '+s.length+' appointments to Raider Pass Builder. It is open in a new tab.',6000)}})})();`;
 $('bmCode').value = BM;
 $('bmLink').setAttribute('href', BM);
+const showOutlookBanner = msg => { const el = $('outlookBanner'); el.hidden = !msg; el.innerHTML = msg || ''; };
+if (location.hash === '#outlook') showOutlookBanner('<span>Waiting for appointments from Outlook…</span>');
+const OUTLOOK = /^https:\/\/(outlook\.(cloud\.microsoft|office\.com|office365\.com|live\.com))$/;
+let lastSent = '';
+window.addEventListener('message', e => {
+  if (!(OUTLOOK.test(e.origin) || window.__RPB_TEST_ORIGIN === e.origin)) return;
+  const d = e.data;
+  if (!d || d.type !== 'rpb-entries' || typeof d.text !== 'string') return;
+  try { e.source.postMessage({ type: 'rpb-ok' }, e.origin); } catch (err) {}
+  if (d.text === lastSent) return;
+  lastSent = d.text;
+  if (S.example) { S.example = false; S.report = null; S.events = []; S.overrides = {}; S.manual = []; }
+  const { added } = addEvents(d.text, '');
+  showOutlookBanner(`<span>✓ Got <b>${added}</b> calendar entr${added === 1 ? 'y' : 'ies'} from Outlook.</span>${S.report ? '<span>Check them in Step 4.</span>' : '<span>Now do <a href="#step3">Step 3</a>: choose the schedule file.</span>'}`);
+  render();
+  if (!S.report) { askOtherTabs(); document.getElementById('step3').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  else document.getElementById('step4').scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+// Another Pass Builder tab that already has the schedule can hand it over (same computer, nothing saved).
+let bc = null; try { bc = new BroadcastChannel('raider-pass-builder'); } catch (e) {}
+function askOtherTabs() { if (bc) bc.postMessage({ type: 'need-schedule' }); }
+if (bc) bc.onmessage = e => {
+  const d = e.data || {};
+  if (d.type === 'need-schedule' && S.rawRows && !S.example) bc.postMessage({ type: 'schedule', rows: S.rawRows });
+  else if (d.type === 'schedule' && !S.report && Array.isArray(d.rows)) {
+    const rep = PB.parseReport(d.rows);
+    if (rep.students.length) { S.rawRows = d.rows; S.report = finishReport(rep); showOutlookBanner(`<span>✓ Got <b>${S.events.length}</b> calendar entries from Outlook, and used the schedule already open in your other Pass Builder tab.</span><span>Check them in Step 4.</span>`); render(); document.getElementById('step4').scrollIntoView({ block: 'start' }); }
+  }
+};
 $('bmLink').addEventListener('click', e => { e.preventDefault(); $('bmStatus').textContent = 'Drag the button to your favorites bar instead of clicking it here.'; });
 $('copyBmBtn').addEventListener('click', () => {
   const done = () => $('bmStatus').textContent = 'Copied.';
@@ -986,7 +1064,7 @@ $('copyBmBtn').addEventListener('click', () => {
 function quickLookup() {
   const out = $('qres'), rep = S.report, raw = $('qlook').value.trim();
   $('qDate').textContent = rep ? `${S.example ? 'Example data · ' : ''}Schedule for ${fmtDate(rep.date)}` : '';
-  if (!rep) { out.innerHTML = '<div class="empty">Load tomorrow\'s schedule export first.</div>'; return; }
+  if (!rep) { out.innerHTML = '<div class="empty">Add tomorrow\'s schedule file first (Step 3).</div>'; return; }
   if (raw.length < 2) { out.innerHTML = `<div class="empty">${rep.students.length.toLocaleString()} students loaded. Start typing a name.</div>`; return; }
   let hits = [];
   // a pasted calendar entry or "First Last": use the same matching as the passes
