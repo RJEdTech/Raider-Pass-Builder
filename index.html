@@ -270,24 +270,21 @@ body.fs .rj-masthead::before{display:none}
 </header>
 
 <main>
-  <p class="lead">Every student on tomorrow's counselor calendars, with their <strong>1st-block room</strong>, in about five minutes. It can also print <strong>every pass for the day</strong>, filled in and sorted in walking order.</p>
-  <p class="safe">🔒 Student schedules and appointments are read on this computer only. Nothing is uploaded or saved, and it's all gone when you close the page.</p>
+  <p class="lead">Find any student's <strong>1st-block room for tomorrow</strong> in seconds. Download tomorrow's schedule once, then type each name you see on the counselors' calendars.</p>
+  <p class="safe">🔒 The schedule file is read on this computer only. Nothing is uploaded or saved, and it's all gone when you close the page.</p>
 
-  <div class="banner" id="outlookBanner" hidden></div>
-  <div class="banner" id="exampleBanner" hidden><span>You're looking at <b>example students</b> (made-up names). Do Steps 1–3 to use real data.</span></div>
+  <div class="banner" id="exampleBanner" hidden><span>You're looking at <b>example students</b> (made-up names). Do Steps 1 and 2 to use real data.</span></div>
   <div class="banner" id="dateBanner" data-tone="warn" hidden></div>
 
   <nav class="steps-nav" aria-label="Steps">
     <a href="#step1"><b>1</b> Download tomorrow's schedule</a>
-    <a href="#step2"><b>2</b> Send the counselors' calendars</a>
-    <a href="#step3"><b>3</b> Add the schedule file</a>
-    <a href="#step4"><b>4</b> Read the rooms</a>
+    <a href="#step3"><b>2</b> Look up each student</a>
   </nav>
 
   <!-- ===== Step 1 ===== -->
   <section class="block" id="step1">
     <h2 class="section"><span class="num">STEP 1</span> Download tomorrow's schedule from myRJ</h2>
-    <p class="section-sub">This saves a file to your Downloads folder. You'll use it in Step 3.</p>
+    <p class="section-sub">Do this once each afternoon. It saves a file to your Downloads folder that you'll use in Step 2.</p>
     <ol class="howto">
       <li>
         <div class="h-title">Open the report</div>
@@ -307,6 +304,50 @@ body.fs .rj-masthead::before{display:none}
     </ol>
   </section>
 
+  <!-- ===== Step 2 (id kept as step3 for the hidden parts' code) ===== -->
+  <section class="block" id="step3">
+    <h2 class="section"><span class="num">STEP 2</span> Add the file, then look up each student</h2>
+    <p class="section-sub">Add the file once. Then type names one after another, as many as you need.</p>
+    <ol class="howto">
+      <li>
+        <div class="h-title">Choose the file from Step 1</div>
+        <div class="h-body">Click the dashed box just below these pictures. A window opens on your <b>Downloads</b> folder. Click the newest file ending in <b>.xls</b>, then click <b>Open</b>. A line appears under the box with the date and how many students loaded ①. Check that the date is <b>tomorrow</b>.</div>
+        <figure style="max-width:680px" class="shot"><img width="680" src="img/drop.png" alt="The file box, with the line showing the schedule date and number of students circled" loading="lazy"><figcaption>Example. Yours will say about 1,600 students.</figcaption></figure>
+      </li>
+    </ol>
+    <label class="dropzone" id="drop" for="schedFile" style="margin-top:1rem">
+      <input type="file" id="schedFile" accept=".xls,.xlsx">
+      <div class="primary-text">Click here to choose the schedule file</div>
+      <div class="secondary-text">or drag it here from your Downloads folder · <span class="browse-link">browse</span></div>
+    </label>
+    <div class="loaded" id="schedFacts"></div>
+    <div class="actions" style="margin-top:.6rem"><button class="btn ghost" type="button" id="exampleBtn">Just looking? Try it with example students</button></div>
+    <details id="how1" hidden></details>
+
+    <div class="lookup-box" style="margin-top:1.5rem">
+      <label class="field" for="qlook">Type a student's name
+        <input type="search" id="qlook" placeholder="First or last name" autocomplete="off" spellcheck="false">
+      </label>
+      <div class="qmeta" id="qDate"></div>
+      <div id="qres" aria-live="polite"></div>
+    </div>
+
+    <ol class="howto" style="counter-reset: s 1; margin-top:1.5rem">
+      <li>
+        <div class="h-title">Type the name from the counselor's calendar</div>
+        <div class="h-body">Click in the <b>Type a student's name</b> box above and type part of the name, first or last. Spelling doesn't have to be perfect. The <b>1st-block room</b> shows in big letters ②, with the building, the teacher and Red or White day. For the next student, click in the box again and type the next name. The old name is highlighted, so typing replaces it.</div>
+        <figure style="max-width:680px" class="shot"><img width="680" src="img/lookup.png" alt="The lookup box with a name typed and the room circled" loading="lazy"><figcaption>Example student.</figcaption></figure>
+      </li>
+      <li>
+        <div class="h-title">Write it on the pass</div>
+        <div class="h-body">Put the teacher on <b>Delivered to</b> and the room on <b>Rm.</b> ③.</div>
+        <figure style="max-width:420px" class="shot"><img width="420" src="img/pass-fill.png" alt="A blank BD counseling pass with Delivered to and Rm. circled" loading="lazy"></figure>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ===== Parts still being built (calendar import, room list, pass printing). Hidden for now; the code stays so we can bring them back. ===== -->
+  <div id="laterParts" hidden>
   <!-- ===== Step 2 ===== -->
   <section class="block" id="step2">
     <h2 class="section"><span class="num">STEP 2</span> Send the counselors' calendars from Outlook</h2>
@@ -384,44 +425,6 @@ body.fs .rj-masthead::before{display:none}
           <button class="btn ghost" type="button" id="clearEntriesBtn">Start over</button>
         </div>
         <span class="status" id="entryStatus"></span>
-      </div>
-    </details>
-  </section>
-
-  <!-- ===== Step 3 ===== -->
-  <section class="block" id="step3">
-    <h2 class="section"><span class="num">STEP 3</span> Add the schedule file</h2>
-    <p class="section-sub">Do this in the Pass Builder tab that opened in Step 2.</p>
-    <ol class="howto">
-      <li>
-        <div class="h-title">Choose the file from Step 1</div>
-        <div class="h-body">Click the dashed box ①. A window opens on your <b>Downloads</b> folder. Click the newest file ending in <b>.xls</b>, then click <b>Open</b>.</div>
-        <figure style="max-width:680px" class="shot"><img width="680" src="img/drop.png" alt="The Pass Builder's file box, circled" loading="lazy"></figure>
-      </li>
-    </ol>
-    <label class="dropzone" id="drop" for="schedFile">
-      <input type="file" id="schedFile" accept=".xls,.xlsx">
-      <div class="primary-text">Click here to choose the schedule file</div>
-      <div class="secondary-text">or drag it here from your Downloads folder · <span class="browse-link">browse</span></div>
-    </label>
-    <div class="loaded" id="schedFacts"></div>
-    <div class="actions" style="margin-top:.6rem"><button class="btn ghost" type="button" id="exampleBtn">Just looking? Try it with example students</button></div>
-    <details id="how1" hidden></details>
-
-    <div class="lookup-box" style="margin-top:1.5rem">
-      <label class="field" for="qlook">Need just one student? Type a name
-        <input type="search" id="qlook" placeholder="First or last name" autocomplete="off" spellcheck="false">
-      </label>
-      <div class="qmeta" id="qDate"></div>
-      <div id="qres" aria-live="polite"></div>
-    </div>
-    <details class="setup" style="margin-top:.6rem">
-      <summary>How the one-student lookup works</summary>
-      <div>
-        <p class="small">Type part of the name, first or last, in any order. Spelling doesn't have to be perfect. The 1st-block room shows in big letters ②, with the building, teacher and Red or White day.</p>
-        <figure style="max-width:680px" class="shot"><img width="680" src="img/lookup.png" alt="The lookup box with a name typed and the room circled" loading="lazy"><figcaption>Example student.</figcaption></figure>
-        <p class="small">Writing passes by hand? Put the teacher on <b>Delivered to</b> and the room on <b>Rm.</b> ③.</p>
-        <figure style="max-width:420px" class="shot"><img width="420" src="img/pass-fill.png" alt="A blank BD counseling pass with Delivered to and Rm. circled" loading="lazy"></figure>
       </div>
     </details>
   </section>
@@ -514,6 +517,7 @@ body.fs .rj-masthead::before{display:none}
       </div>
     </details>
   </section>
+  </div>
 </main>
 
 <footer class="site-footer">
@@ -1010,6 +1014,7 @@ async function loadFile(file) {
     if (S.events.length) showOutlookBanner(`<span>✓ Schedule loaded and matched to <b>${S.events.length}</b> calendar entries.</span><span>Check them in <a href="#step4">Step 4</a>.</span>`);
     $('entryStatus').textContent = '';
     render();
+    if (!CALENDAR_PARTS) { const q = $('qlook'); q.value = ''; quickLookup(); q.focus(); }
   } catch (err) { st.innerHTML = `<span class="chip bad">${esc(err.message || String(err))}</span>`; }
 }
 $('schedFile').addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
@@ -1057,15 +1062,23 @@ $('addManualBtn').addEventListener('click', () => {
   render();
 });
 
+// ---------- parts still being built ----------
+// Outlook calendar import (Send to Pass Builder), room list and pass printing.
+// Turned off Oct 2026: the calendar import didn't work in Suzanne's Outlook. The page is
+// Step 1 (download the schedule) + Step 2 (look up by name). Set to true to bring them back.
+const CALENDAR_PARTS = false;
+if (CALENDAR_PARTS) document.getElementById('laterParts').hidden = false;
+
 // bookmark code
 const BM = String.raw`javascript:(()=>{const U='https://rjedtech.github.io/Raider-Pass-Builder/',O='https://rjedtech.github.io';const s=[...new Set([...document.querySelectorAll('[aria-label]')].map(e=>e.getAttribute('aria-label')).filter(t=>/\d{1,2}:\d{2} [AP]M to \d{1,2}:\d{2} [AP]M, [A-Z][a-z]+day, /.test(t)))];const b=document.createElement('div');b.style.cssText='position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:2147483647;background:#2a2a2a;color:#fff;border-bottom:5px solid #C11430;padding:14px 22px;font:600 16px Segoe UI,Arial,sans-serif;border-radius:6px;box-shadow:0 8px 28px rgba(0,0,0,.45);max-width:90vw';document.body.appendChild(b);const say=(t,ms)=>{b.textContent=t;if(ms)setTimeout(()=>b.remove(),ms)};if(!s.length){say('Raider Pass Builder: no appointments found. Wait for the calendar to finish loading, then click Send to Pass Builder again.',7000);return}const txt=s.join('\n');try{const d=document.createElement('textarea');d.value=txt;document.body.appendChild(d);d.select();document.execCommand('copy');d.remove()}catch(e){}say('Sending '+s.length+' appointments to Raider Pass Builder…');const w=window.open(U+'#outlook','_blank');let n=0,done=false;const t=setInterval(()=>{n++;try{w&&w.postMessage({type:'rpb-entries',text:txt},O)}catch(e){}if(n>40&&!done){clearInterval(t);say('Raider Pass Builder did not open. Open it yourself and paste with Ctrl + V (the appointments are copied).',10000)}},500);addEventListener('message',e=>{if(e.origin===O&&e.data&&e.data.type==='rpb-ok'&&!done){done=true;clearInterval(t);say('Sent '+s.length+' appointments to Raider Pass Builder. It is open in a new tab.',6000)}})})();`;
 $('bmCode').value = BM;
 $('bmLink').setAttribute('href', BM);
-const showOutlookBanner = msg => { const el = $('outlookBanner'); el.hidden = !msg; el.innerHTML = msg || ''; };
-if (location.hash === '#outlook') showOutlookBanner('<span>Waiting for appointments from Outlook…</span>');
+const showOutlookBanner = msg => { const el = $('outlookBanner'); if (!el) return; el.hidden = !msg; el.innerHTML = msg || ''; };
+if (CALENDAR_PARTS && location.hash === '#outlook') showOutlookBanner('<span>Waiting for appointments from Outlook…</span>');
 const OUTLOOK = /^https:\/\/(outlook\.(cloud\.microsoft|office\.com|office365\.com|live\.com))$/;
 let lastSent = '';
 window.addEventListener('message', e => {
+  if (!CALENDAR_PARTS) return;
   if (!(OUTLOOK.test(e.origin) || window.__RPB_TEST_ORIGIN === e.origin)) return;
   const d = e.data;
   if (!d || d.type !== 'rpb-entries' || typeof d.text !== 'string') return;
@@ -1080,7 +1093,7 @@ window.addEventListener('message', e => {
   else document.getElementById('step4').scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 // Another Pass Builder tab that already has the schedule can hand it over (same computer, nothing saved).
-let bc = null; try { bc = new BroadcastChannel('raider-pass-builder'); } catch (e) {}
+let bc = null; if (CALENDAR_PARTS) try { bc = new BroadcastChannel('raider-pass-builder'); } catch (e) {}
 function askOtherTabs() { if (bc) bc.postMessage({ type: 'need-schedule' }); }
 if (bc) bc.onmessage = e => {
   const d = e.data || {};
@@ -1102,7 +1115,7 @@ $('copyBmBtn').addEventListener('click', () => {
 function quickLookup() {
   const out = $('qres'), rep = S.report, raw = $('qlook').value.trim();
   $('qDate').textContent = rep ? `${S.example ? 'Example data · ' : ''}Schedule for ${fmtDate(rep.date)}` : '';
-  if (!rep) { out.innerHTML = '<div class="empty">Add tomorrow\'s schedule file first (Step 3).</div>'; return; }
+  if (!rep) { out.innerHTML = '<div class="empty">Add tomorrow\'s schedule file first: click the dashed box above.</div>'; return; }
   if (raw.length < 2) { out.innerHTML = `<div class="empty">${rep.students.length.toLocaleString()} students loaded. Start typing a name.</div>`; return; }
   let hits = [];
   // a pasted calendar entry or "First Last": use the same matching as the passes
@@ -1125,6 +1138,8 @@ function quickLookup() {
     <div>${fc && dayColor(fc) ? `<span class="chip ${dayColor(fc) === 'Red' ? 'bad' : 'plain'}">${dayColor(fc)} day</span>` : ''}</div></div>`; }).join('')}</div>`;
 }
 $('qlook').addEventListener('input', quickLookup);
+// clicking back into the box selects the last name, so the next one types right over it
+$('qlook').addEventListener('focus', e => setTimeout(() => e.target.select(), 0));
 
 // ---------- downloads ----------
 
