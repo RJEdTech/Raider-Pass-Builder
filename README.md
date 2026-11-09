@@ -34,3 +34,7 @@ One self-contained `index.html`, plus screenshots in `img/`. Libraries load from
 
 - **Screenshots:** the myRJ pictures are real, taken in October 2026 at full resolution. Builder pictures are 2× captures with made-up example students. Retake them if myRJ moves the buttons.
 - **Counselor list** (`DEFAULT_COUNSELORS`) and **walking order** (`BUILDING_ORDER`, `WALK`): only used by the parts still being built.
+
+## License
+
+© 2026 Jason Beyer, RJ Ed Tech. Licensed under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/): free to share and adapt for non-commercial use with credit. See [LICENSE](LICENSE) for what the license does not cover.
